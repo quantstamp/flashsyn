@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlashSyn — Reusable Workflow</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #e2e2e2;
+    --code-bg: #f4f4f5; --accent: #2563eb; --th-bg: #f7f7f8; --note-bg: #fbfaf5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d; --fg: #e6e6e6; --muted: #a0a0a8; --border: #2c2f36;
+      --code-bg: #22252c; --accent: #6ea8fe; --th-bg: #22252c; --note-bg: #24231c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.5rem 1.25rem 5rem; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin: 0 0 .25rem; line-height: 1.2; }
+  h2 { font-size: 1.35rem; margin: 2.75rem 0 .75rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  h3 { font-size: 1.08rem; margin: 1.75rem 0 .5rem; }
+  p, li { color: var(--fg); }
+  .lede { color: var(--muted); font-size: 1.02rem; margin: .25rem 0 0; }
+  a { color: var(--accent); }
+  code {
+    background: var(--code-bg); padding: .12em .38em; border-radius: 4px;
+    font: 0.87em/1.4 "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: .9rem 1rem; overflow-x: auto; margin: 1rem 0;
+  }
+  pre code { background: none; padding: 0; }
+  .table-wrap { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; }
+  th, td { text-align: left; padding: .55rem .7rem; border: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--th-bg); font-weight: 600; }
+  td code, th code { white-space: nowrap; }
+  ol, ul { padding-left: 1.4rem; }
+  li { margin: .35rem 0; }
+  .note {
+    background: var(--note-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: .8rem 1rem; margin: 1.25rem 0; font-size: .95rem;
+  }
+  .muted { color: var(--muted); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+  .kicker { text-transform: uppercase; letter-spacing: .08em; font-size: .72rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+
+  <p class="kicker">FlashSyn</p>
+  <h1>Reusable Workflow</h1>
+  <p class="lede">How to point FlashSyn at a <strong>new</strong> protocol. This captures the current
+  (pre-modernization) procedure so the AI-augmented tooling in <code>PROPOSAL.md</code> has a concrete
+  baseline to automate.</p>
+
+  <div class="note">
+    Source of truth: the <code>flashsyn-euler</code> repo (the proceduralized "Pro" line), read
+    alongside the older <code>research-flashsyn</code> engine. <strong>Nothing here has been executed
+    yet</strong> — see <a href="#env">Environment &amp; reproducibility</a> for the setup gaps found.
+  </div>
+
+  <h2 id="which">1. Which codebase is the reusable one</h2>
+  <p>Two prior repos sit in this directory:</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Repo</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>research-flashsyn</code> (2023)</td><td>Original paper artifact. Full engine + ~17 hand-written benchmarks. Research-grade.</td></tr>
+      <tr><td><code>flashsyn-euler</code> (2024)</td><td><strong>Reusable line.</strong> Same engine, wrapped in a <code>template.py</code> fill-in-the-blanks form. Its README calls it "a boilerplate and a stable version."</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>Use <code>flashsyn-euler</code> as the base.</strong> Treat <code>research-flashsyn</code>'s
+  17 benchmarks as a regression suite / reference examples, not as the starting skeleton. (The two use
+  contradicting action styles; do not blend them.)</p>
+
+  <h2 id="idea">2. The core idea</h2>
+  <p>FlashSyn splits cleanly into two halves joined by one convention:</p>
+  <ul>
+    <li><strong>Fixed engine</strong> (protocol-agnostic, never edited): the synthesizer, the polynomial
+    approximators, the dependency checker, and the Foundry harness.</li>
+    <li><strong>Authored per protocol</strong> (the expert work): a Foundry test that forks the chain,
+    plus a Python "action model" describing each protocol action.</li>
+  </ul>
+  <p>The seam between them is a <strong>two-part contract</strong>:</p>
+  <ol>
+    <li><strong><code>$$</code> placeholders</strong> in Solidity snippets mark the numeric parameters
+    FlashSyn will search over.</li>
+    <li><strong><code>revert("FlashSyn: &lt;numbers&gt;")</code></strong> is the data channel. Actions
+    deliberately revert with a string starting <code>FlashSyn</code>; the Python side regex-scrapes
+    forge's <code>FAIL. Reason:</code> line, extracts the numbers, and uses them as measured state
+    changes. A revert reason <em>without</em> <code>FlashSyn</code> means the action reverted for real
+    → that sample is infeasible.</li>
+  </ol>
+  <p>Because of this contract, adapting to a new protocol requires <strong>no engine changes</strong> —
+  only the two authored files below.</p>
+
+  <h2 id="author">3. What you author (two files)</h2>
+
+  <h3>3a. Foundry test — <code>src/foundryModule/src/test/attack.t.sol</code></h3>
+  <p>Forks the target chain at the exploit block and sets up the attacker (starting balances, any
+  prank / minter setup). The runner is <code>src/foundryModule/run.sh &lt;name&gt;</code>, which wraps:</p>
+  <pre><code>forge test --match-contract &lt;name&gt; --fork-url &lt;RPC&gt; --fork-block-number &lt;N&gt;</code></pre>
+  <p>RPC endpoints and the fork block are the only chain configuration. For Euler: contract
+  <code>euler</code>, mainnet, block <code>16818064</code>.</p>
+
+  <h3>3b. Action model — a copy of <code>src/FlashSynProActions/template.py</code></h3>
+  <p><code>template.py</code> is a numbered-TODO form; <code>EulerActions.py</code> is the same form
+  filled in for Euler and serves as the worked reference. You write one base class plus one subclass
+  per protocol action.</p>
+
+  <p class="muted"><strong>Base class</strong> (top of the file):</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>initialBalances</code></td><td>Attacker's starting balances, e.g. <code>{"USDC": 400000000}</code> (decimals ignored).</td></tr>
+      <tr><td><code>TokenPrices</code></td><td>Price of each token of interest for profit weighting; stablecoins = <code>1.0</code>.</td></tr>
+      <tr><td><code>start_str</code></td><td>The Solidity header — imports, interfaces, contract decl, <code>setUp()</code> — up to the first action.</td></tr>
+      <tr><td><code>calcProfit(stats)</code></td><td>Objective function: how measured end-state → profit number.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="muted"><strong>One subclass per action</strong> (<code>deposit</code>, <code>borrow</code>,
+  <code>donate</code>, <code>liquidate</code>, …):</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Field / method</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>numInputs</code>, <code>range</code></td><td>How many parameters this action exposes, and the search bounds for them.</td></tr>
+      <tr><td><code>tokensIn</code> / <code>tokensOut</code></td><td>Which attacker tokens the action consumes / produces.</td></tr>
+      <tr><td><code>actionStr()</code></td><td>Solidity to <strong>execute</strong> the action, with <code>$$</code> where a searched parameter goes.</td></tr>
+      <tr><td><code>collectorStr()</code></td><td>Solidity that runs the action and <code>revert</code>s with a <code>"FlashSyn: …"</code> string carrying the measured state delta. This is how the engine learns the action's input→output behavior.</td></tr>
+      <tr><td><code>transit(inputs, actionList)</code></td><td>How the action updates the abstract balance vector, using the approximator's predicted output.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><strong><code>main()</code></strong> wires it up: lists the actions, declares each action's
+  <em>prestate dependencies</em> (which other actions change its inputs — from step 2 below), then
+  calls <code>initialPass()</code> and later the synthesizer.</p>
+
+  <h2 id="run">4. Run procedure (five steps)</h2>
+  <p>From the <code>flashsyn-euler</code> root, matching its README:</p>
+  <ol>
+    <li>
+      <strong>Compile the Foundry script.</strong>
+      <pre><code>cd src/foundryModule &amp;&amp; ./run.sh &lt;contract&gt; &lt;ETH|BSC|Fantom|Polygon&gt; &lt;fork-block&gt;
+# Euler: ./run.sh euler ETH 16818064</code></pre>
+    </li>
+    <li>
+      <strong>Compute action dependencies.</strong>
+      <pre><code>python3 src/dependencyCheck.py "./run.sh &lt;contract&gt; &lt;chain&gt; &lt;fork-block&gt; -vvv"</code></pre>
+      Runs the actions twice under <code>vm.record()</code> / <code>vm.accesses()</code>, diffs the
+      storage read/write sets, and reports which actions actually influence which others. Paste that
+      graph into the <code>actionN_prestate_dependency</code> lists in <code>main()</code>.
+      <span class="muted">(Unsure? Conservatively mark every action as dependent on every other —
+      correct, just slower.)</span>
+    </li>
+    <li>
+      <strong>Collect initial data points.</strong>
+      <pre><code>python3 src/FlashSynProActions/EulerActions.py</code></pre>
+      <code>initialPass()</code> samples each action (and its dependency sequences) on the fork,
+      gathering ~500–2000 input→output points via the collector reverts. Cached under
+      <code>initialDataPoints/&lt;name&gt;/</code>. Ensure that folder exists first.
+    </li>
+    <li>
+      <strong>Run the synthesis.</strong> In the actions file, comment out the <code>initialPass()</code>
+      call and uncomment the <code>Synthesizer.synthesis(maxSynthesisLen, Pruning, CounterExampleLoop, …)</code>
+      block, then:
+      <pre><code>python3 src/FlashSynProActions/EulerActions.py &gt; EulerLog.txt</code></pre>
+    </li>
+    <li>
+      <strong>Read the result.</strong> The tail of <code>EulerLog.txt</code> prints the best profit and
+      the winning action sequence + parameters.
+    </li>
+  </ol>
+
+  <h2 id="engine">5. What the engine does (under the hood)</h2>
+  <p>Useful for debugging, not something you edit:</p>
+  <ul>
+    <li><strong>Action → Solidity → fork.</strong> <code>buildDVDattackContract</code> stitches actions'
+    <code>actionStr()</code> into a full attack; the collector variant runs the prefix as real calls and
+    the last action instrumented. Each sampled parameter tuple becomes its own <code>testExampleN_()</code>,
+    so one <code>forge test</code> measures many samples at once.</li>
+    <li><strong>Data points → polynomial surrogate.</strong> Sampled input→output points (keyed by a
+    canonicalized <em>AttackDAG</em> so equivalent sequences share data) are fit per-action into a
+    polynomial approximation of profit over the parameters.</li>
+    <li><strong>Search.</strong> The synthesizer does BFS over action sequences up to
+    <code>maxSynthesisLen</code>, and for each candidate runs SciPy <code>shgo</code> global optimization
+    <strong>against the cheap polynomial</strong> to find profitable parameters.</li>
+    <li><strong>Counter-example loop.</strong> Candidate parameters are validated by concrete forge
+    execution. When actual profit diverges from the polynomial estimate by &gt;5%, that point is logged
+    as a counter-example, re-executed on-fork, added to the data, and the polynomial is refit —
+    correcting the surrogate exactly where it mispredicts.</li>
+    <li><strong>Pruning.</strong> Low-profit sequences are dropped, the worklist is capped, and late
+    rounds discard traces far below the global best.</li>
+  </ul>
+  <p>The whole loop: <strong>cheap polynomial to search a huge space fast; concrete EVM execution to
+  validate and to fix the polynomial where it is wrong.</strong></p>
+
+  <h2 id="automate">6. What the modernization must automate</h2>
+  <p>Everything in <a href="#author">Section 3</a> is the expert-heavy surface <code>PROPOSAL.md</code>
+  item #1 targets: identifying the protocol's actions, their token flows and parameter ranges, writing
+  the <code>actionStr</code> / <code>collectorStr</code> snippets and <code>transit</code> logic, and the
+  <code>attack.t.sol</code> setup. The engine (Sections 4–5) stays fixed.</p>
+
+  <hr>
+
+  <h2 id="env">Environment &amp; reproducibility</h2>
+  <p>Checked on this machine (macOS arm64) — <strong>the tool does not yet run out of the box</strong>:</p>
+  <ul>
+    <li><strong>RPC endpoint is live.</strong> The committed Alchemy mainnet endpoint still responds.
+    (It is shared and may be closed later; plan to supply your own in <code>settings.toml</code> /
+    <code>run.sh</code>.)</li>
+    <li><strong>Foundry: not installed.</strong> The README pins a 2023 build:
+    <code>foundryup -C 5be158b</code>. The revert-string and <code>dependencyCheck</code> parsing depend
+    on forge's exact log/color output format, so a modern forge may break the Python scrapers. The
+    version pin is a real reproducibility risk to resolve during the baseline run.</li>
+    <li><strong>Python: 3.9 present, 3.7 (per README) absent.</strong> Deps in
+    <code>requirements.txt</code> (numpy 1.21.6, scipy 1.7.3, web3, sympy, scikit-learn, …) are
+    <strong>not installed</strong>.</li>
+  </ul>
+  <p class="muted">Next step (deferred at user request): install Foundry + Python deps and reproduce the
+  Euler run end-to-end to confirm the loop executes and to pin down exactly what breaks.</p>
+
+</main>
+</body>
+</html>

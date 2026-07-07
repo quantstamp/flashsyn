@@ -1,0 +1,10 @@
+[version]
+current = "v0.0.0-alpha"
+
+# Archive-node RPC endpoints — supply your own (these are placeholders).
+[settings]
+MainnetRpcProvider = "https://eth-mainnet.example.com/v2/YOUR_ALCHEMY_KEY"
+BSCRpcProvider = "https://YOUR_BSC_RPC_ENDPOINT"
+FantomRpcProvider = "https://fantom-mainnet.example.com/v2/YOUR_ALCHEMY_KEY"
+PolygonRpcProvider = "https://polygon-mainnet.example.com/v2/YOUR_ALCHEMY_KEY"
+

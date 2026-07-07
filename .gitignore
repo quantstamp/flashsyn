@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Foundry build output
+src/foundryModule/out/
+src/foundryModule/cache/
+
+# FlashSyn generated data / logs
+initialDataPoints/
+*Log.txt
+
+# macOS
+.DS_Store
