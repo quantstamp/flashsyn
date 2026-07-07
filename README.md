@@ -68,6 +68,41 @@ cp examples/euler/attack.t.sol    src/foundryModule/src/test/attack.t.sol
 Then follow the run procedure with `./run.sh euler ETH 16818064`. See
 [`examples/euler/README.md`](examples/euler/README.md).
 
+## Docker
+
+A `Dockerfile` pins the whole environment (Foundry + the 2021-era Python stack), which is the
+reliable way to run FlashSyn today. The image targets **`linux/amd64`** on purpose — the old pinned
+wheels exist for amd64 but not arm64 — so on Apple Silicon it runs under emulation (slower, but it
+builds).
+
+```sh
+# fast path: prebuilt current Foundry
+docker build -t flashsyn .
+docker run --rm -it -e ETH=<your-mainnet-archive-rpc> flashsyn
+
+# or with compose (bind-mounts the repo so edits + logs persist on the host)
+ETH=<your-mainnet-archive-rpc> docker compose run --rm flashsyn
+```
+
+Inside the container the workflow is unchanged — `./run.sh <contract> <chain> <block>`, then
+`dependencyCheck.py`, etc. Pass your archive-node endpoint via `-e ETH=...` (or `BSC`/`Fantom`/
+`Polygon`); `run.sh` reads them from the environment.
+
+**Foundry fidelity.** FlashSyn's Python code scrapes forge's exact log output, so a modern forge may
+need parser tweaks. For byte-for-byte fidelity, build the upstream-pinned 2023 commit from source:
+
+```sh
+docker build --build-arg FOUNDRY_INSTALL=pinned-source -t flashsyn:pinned .
+```
+
+This clones Foundry at commit `5be158b` and compiles it with Rust — slower, and not guaranteed to
+build with a modern toolchain (`RUST_VERSION` and `FOUNDRY_COMMIT` are overridable build args). Treat
+it as the fidelity option; `latest` is the default.
+
+> Not yet build-verified in this environment (the Docker daemon was not running). The Python-deps
+> stage in particular — old numpy/scipy/pykdtree/scikit-learn on amd64/py3.9 — should be confirmed
+> with `docker build --target deps .` before relying on the image.
+
 ## Prerequisites & known gaps
 
 - **Foundry** — the original was pinned to a 2023 build (`foundryup -C 5be158b`). The Python side

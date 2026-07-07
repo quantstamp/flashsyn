@@ -1,0 +1,24 @@
+# Convenience wrapper for iterative FlashSyn runs.
+#   docker compose build          # build the image
+#   docker compose run --rm flashsyn   # drop into a shell in /flashsyn
+#
+# The bind mount keeps generated files (attack.t.sol edits, initialDataPoints/, logs)
+# on the host so they survive the container. Override RPC endpoints via the env vars.
+services:
+  flashsyn:
+    build:
+      context: .
+      args:
+        FOUNDRY_INSTALL: ${FOUNDRY_INSTALL:-latest}
+    platform: linux/amd64
+    volumes:
+      - .:/flashsyn
+    environment:
+      # supply your own archive-node endpoints (used by src/foundryModule/run.sh)
+      ETH: ${ETH:-}
+      BSC: ${BSC:-}
+      Fantom: ${Fantom:-}
+      Polygon: ${Polygon:-}
+    working_dir: /flashsyn
+    stdin_open: true
+    tty: true

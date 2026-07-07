@@ -1,0 +1,10 @@
+.git
+**/__pycache__
+*.py[cod]
+**/.DS_Store
+src/foundryModule/out
+src/foundryModule/cache
+initialDataPoints
+*Log.txt
+.venv
+venv
