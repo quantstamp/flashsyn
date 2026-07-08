@@ -9,3 +9,4 @@ sympy==1.10.1
 tabulate==0.8.10
 toml==0.10.2
 scikit-learn==1.0.2
+web3==6.11.3
