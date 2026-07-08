@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
 
 
 import Actions.Adapter
+from Actions.macros import DVD
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.dirname(dir_path)
@@ -18,7 +19,7 @@ project_path = os.path.dirname(project_path)
 class forgedataCollectContractDVD:
     def __init__(self, ActionWrapper):
 
-        self.ExecutionMode = 2  # 0 for ETH  1 for BSC  2 for DVD
+        self.ExecutionMode = DVD  # 0 for ETH  1 for BSC  2 for DVD
         # block num
         self.ActionWrapper = ActionWrapper
         self.startStr = ActionWrapper.start_str  # start code of attack tester

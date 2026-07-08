@@ -3,7 +3,6 @@ import os
 import config
 import toml
 from forge.forgeJson import parse_datapoints
-settings = toml.load("settings.toml")
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -11,6 +10,20 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.dirname(dir_path)
 
 project_path = os.path.dirname(project_path)
+
+
+# settings.toml lives at the repo root. Resolve it from __file__ (not the cwd)
+# and load it lazily, so `import`-ing the engine works from any directory — the
+# old `toml.load("settings.toml")` at module top crashed unless you happened to
+# run from the repo root.
+_settings = None
+
+
+def _load_settings():
+    global _settings
+    if _settings is None:
+        _settings = toml.load(os.path.join(project_path, "settings.toml"))
+    return _settings
 
 
 class forgedataCollectContract:
@@ -288,6 +301,7 @@ contract attackTester is DSTest, stdCheats {
         self.functionCounter = 0
         self.attackContract = ""
 
+        settings = _load_settings()
         endPoint = settings["settings"]["MainnetRpcProvider"]
         if self.ExecutionMode == 1:
             endPoint = settings["settings"]["BSCRpcProvider"]

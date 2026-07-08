@@ -19,10 +19,13 @@ import re
 from web3 import Web3
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(SCRIPT_DIR)
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
 dir_path = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.dirname(dir_path)
+
+from conventions import SEPARATOR_TEXT
 
 
 class Action():
@@ -60,13 +63,13 @@ def hasAddress(string, addresses):
     return None
 
 
-# Marker strings in modern forge (>=1.x) `-vvvv` traces. Piped output carries no
-# ANSI color codes, so we match the decoded text forge prints. The separators are
-# emitted from the test as `emit log("...Separator...")` and render inside the
-# Traces block as `emit log(val: "...Separator...")` — the trailing `")` only
-# appears in the trace form, never in the plain Logs block, so splitting on it
-# selects trace sections without double-counting the Logs echo.
-SEPARATOR = 'Separator ==================")'
+# How the separator (conventions.SEPARATOR_TEXT) renders in modern forge (>=1.x)
+# `-vvvv` traces. Piped output carries no ANSI color, so we match the decoded text.
+# The separator is emitted from the test as `emit log("<SEPARATOR_TEXT>")` and shows
+# up in the Traces block as `emit log(val: "<SEPARATOR_TEXT>")`. Appending `")` to the
+# split key restricts matches to that trace form: the plain Logs-block echo of the
+# same line has no closing `")`, so we don't double-count it.
+SEPARATOR = SEPARATOR_TEXT + '")'
 ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;]*m')
 
 
@@ -176,7 +179,7 @@ def modifyAttackTestFile(ActionLists):
         if line == None:
             continue
 
-        if "=================== Separator ==================" in line:
+        if SEPARATOR_TEXT in line:
             counter += 1
             if counter % 2 == 1:
                 newlines.append(line)
