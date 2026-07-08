@@ -99,9 +99,15 @@ This clones Foundry at commit `5be158b` and compiles it with Rust — slower, an
 build with a modern toolchain (`RUST_VERSION` and `FOUNDRY_COMMIT` are overridable build args). Treat
 it as the fidelity option; `latest` is the default.
 
-> Not yet build-verified in this environment (the Docker daemon was not running). The Python-deps
-> stage in particular — old numpy/scipy/pykdtree/scikit-learn on amd64/py3.9 — should be confirmed
-> with `docker build --target deps .` before relying on the image.
+**Verification status.** Built and smoke-tested on an arm64 host (amd64 emulation): the image builds,
+`forge --version` runs, the Python engine + both templates import cleanly, and `run.sh` works. What is
+**not** yet verified is an actual fork run — the default image ships a current forge (1.7.x), and
+FlashSyn's log parsers were written against the 2023 forge, so `dependencyCheck.py` and the data
+collectors may need parser updates (or use the `pinned-source` build). That check belongs to the
+baseline run.
+
+> Note: run FlashSyn commands from the **repo root** — `settings.toml` is loaded via a path relative
+> to the working directory.
 
 ## Prerequisites & known gaps
 

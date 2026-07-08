@@ -17,7 +17,8 @@ ARG FOUNDRY_COMMIT=5be158b
 ARG RUST_VERSION=1.72.0
 
 # ---------- Foundry: prebuilt latest ----------
-FROM --platform=linux/amd64 debian:bullseye-slim AS foundry-latest
+# bookworm (glibc 2.36): current forge binaries require glibc >= ~2.34, so bullseye (2.31) fails.
+FROM --platform=linux/amd64 debian:bookworm-slim AS foundry-latest
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl git ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV PATH="/root/.foundry/bin:${PATH}"
@@ -27,7 +28,7 @@ RUN mkdir -p /out && cp /root/.foundry/bin/forge /out/ \
       && cp /root/.foundry/bin/anvil /out/ 2>/dev/null || true
 
 # ---------- Foundry: pinned commit, built from source ----------
-FROM --platform=linux/amd64 rust:${RUST_VERSION}-slim-bullseye AS foundry-pinned-source
+FROM --platform=linux/amd64 rust:${RUST_VERSION}-slim-bookworm AS foundry-pinned-source
 ARG FOUNDRY_COMMIT
 RUN apt-get update && apt-get install -y --no-install-recommends \
       git libssl-dev pkg-config ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -42,7 +43,7 @@ RUN mkdir -p /out && cp /src/target/release/forge /out/ \
 FROM foundry-${FOUNDRY_INSTALL} AS foundry
 
 # ---------- Python deps (isolated so it can be built/verified alone) ----------
-FROM --platform=linux/amd64 python:3.9-slim-bullseye AS deps
+FROM --platform=linux/amd64 python:3.9-slim-bookworm AS deps
 ENV DEBIAN_FRONTEND=noninteractive
 # build-essential + gfortran + libgomp1 cover any dep that falls back to a source build (pykdtree/scipy).
 RUN apt-get update && apt-get install -y --no-install-recommends \
