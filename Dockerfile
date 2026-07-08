@@ -8,8 +8,10 @@
 #
 # Foundry install mode is selectable:
 #   FOUNDRY_INSTALL=latest         (default) prebuilt current forge via foundryup — fast, always builds.
-#   FOUNDRY_INSTALL=pinned-source  builds forge from the upstream-pinned commit for output-format
-#                                  fidelity (FlashSyn's Python parsers were written against it).
+#                                  This is the right choice: the Python parsers were modernised to
+#                                  consume `forge test --json` / `-vvvv`, so a current forge works.
+#   FOUNDRY_INSTALL=pinned-source  builds the 2023 commit from source. OBSOLETE and currently broken
+#                                  (see the stage below); kept only as a historical reference.
 # Build examples are in README.md ("Docker").
 
 ARG FOUNDRY_INSTALL=latest

@@ -88,44 +88,38 @@ Inside the container the workflow is unchanged — `./run.sh <contract> <chain> 
 `dependencyCheck.py`, etc. Pass your archive-node endpoint via `-e ETH=...` (or `BSC`/`Fantom`/
 `Polygon`); `run.sh` reads them from the environment.
 
-**Foundry fidelity.** FlashSyn's Python code scrapes forge's exact log output, so a modern forge may
-need parser tweaks. For byte-for-byte fidelity, build the upstream-pinned 2023 commit from source:
-
-```sh
-docker build --build-arg FOUNDRY_INSTALL=pinned-source -t flashsyn:pinned .
-```
-
-This clones Foundry at commit `5be158b` and compiles it with Rust (`RUST_VERSION`/`FOUNDRY_COMMIT`
-are overridable build args).
+**Foundry fidelity.** FlashSyn's parsers have been modernised to consume **`forge test --json`**
+(data collectors) and the plain decoded **`-vvvv` trace** (`dependencyCheck.py`), so the **default,
+latest forge just works** — no version pin needed. The old code scraped ANSI-coloured `-vvv` text,
+which a piped modern forge no longer emits; that is fixed. A `pinned-source` build arg exists to
+compile the 2023 commit `5be158b` from source, but it is **obsolete and currently broken** — kept only
+for the historical note below:
 
 > **Known broken (verified 2026-07).** The source build at `5be158b` fails: a build dependency
 > (`svm-rs-builds`) code-generates solc-version constants from the current release list and now
 > collides on solc versions released after 2023 (`E0428: SOLC_VERSION_0_8_35 defined twice`).
-> `foundryup -C <commit>` also no longer offers prebuilt-by-commit binaries. Practically, the exact
-> 2023 forge can't be reproduced today — so the real fix is to **modernize FlashSyn's forge-output
-> parsers** (`dependencyCheck.py`, `forge/forgeCollectDVD.py`) to consume `forge test --json`
-> instead of scraping colored `-vvv` text.
+> `foundryup -C <commit>` also no longer offers prebuilt-by-commit binaries. The exact 2023 forge
+> can't be reproduced today — which is why the parsers were modernised instead.
 
-**Verification status.** Built and smoke-tested on an arm64 host (amd64 emulation): the image builds,
-`forge --version` runs, the Python engine + both templates import cleanly, and `run.sh` works. What is
-**not** yet verified is an actual fork run — the default image ships a current forge (1.7.x), and
-FlashSyn's log parsers were written against the 2023 forge, so `dependencyCheck.py` and the data
-collectors may need parser updates (or use the `pinned-source` build). That check belongs to the
-baseline run.
+**Verification status.** Run end-to-end against the Euler example on an arm64 host (amd64 emulation,
+mainnet archive fork at block 16818064, forge 1.7.1): compile → `dependencyCheck` → data collection
+(all actions) → synthesis all pass, and FlashSyn **rediscovers the exploit** — sequence
+`deposit → mint → donate → liquidateWithdraw`, ~$22.4M profit, with the polynomial estimate matching
+the on-chain execution to the dollar.
 
 > Note: run FlashSyn commands from the **repo root** — `settings.toml` is loaded via a path relative
 > to the working directory.
 
 ## Prerequisites & known gaps
 
-- **Foundry** — the original was pinned to a 2023 build (`foundryup -C 5be158b`). The Python side
-  scrapes forge's exact log/color output, so a modern forge may break `dependencyCheck.py` and the
-  data collectors. Resolving this pin is part of bringing the tool current.
+- **Foundry** — any current forge works; parsers consume `--json` / `-vvvv` (tested on 1.7.1). The
+  original 2023 pin is no longer required.
 - **Python** — `requirements.txt` targets the 3.7-era stack (numpy 1.21, scipy 1.7, …).
 - **RPC** — `settings.toml` / `run.sh` carry shared, rented archive-node endpoints that may be closed;
   supply your own.
-- **Not yet run end-to-end** in this environment. The extraction is verified structurally, not by
-  execution.
+- **Runtime** — a full Euler synthesis is ~10–12 min under amd64 emulation (Apple Silicon); native
+  amd64 is faster. Early synthesis rounds print `0 executions succeed` / `Best Profit 0.2` — that is
+  the pre-refinement Strength-0 phase, **not** a failure; let the counter-example loop run to the end.
 
 ## Provenance
 

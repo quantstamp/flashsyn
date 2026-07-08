@@ -1,8 +1,7 @@
 import subprocess
 import os, sys
-import re
-import codecs
 import config
+from forge.forgeJson import parse_datapoints
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -128,79 +127,19 @@ class forgedataCollectContractDVD:
         open(project_path + "/src/foundryModule/src/attack.sol", "w").close()
 
         # self.dataCollectorCount = 0
+        # config.command is user-supplied (see the template) and may omit --json;
+        # append it so parse_datapoints gets structured output. See forge/forgeJson.py.
         command = config.command
-        
+        if "--json" not in command:
+            command += " --json"
+
         output = subprocess.run(command, capture_output=True,
                                 shell=True, cwd=project_path + "/src/foundryModule/")
-        message = str(output.stdout)
 
         print(command)
-        print(message[:150])
+        print(str(output.stdout)[:150])
 
-        # print("message: ")
-        # print(repr(message))
-
-        statsStrStart = message.find("Running")
-        statsStrEnd = message.find("Encountered a total of")
-
-        statsStr = message[statsStrStart: statsStrEnd]
-
-        # print(statsStr)
-        statsStr = codecs.getdecoder("unicode_escape")(statsStr)[0]
-
-        # filtering out the color settings of the code snippets
-        ansi_escape = re.compile(r'''
-            \x1B  # ESC
-            (?:   # 7-bit C1 Fe (except CSI)
-                [@-Z\\-_]
-            |     # or [ for CSI, followed by a control sequence
-                \[
-                [0-?]*  # Parameter bytes
-                [ -/]*  # Intermediate bytes
-                [@-~]   # Final byte
-            )
-        ''', re.VERBOSE)
-        statsStr = ansi_escape.sub('', statsStr)
-
-        # print(statsStr)
-
-        result = re.findall('FAIL. Reason: (.*) \(gas\: ', statsStr)
-        # print(result)
-
-        # maxStatsLength does not make sense when multiple sequence of actions are running at the same time
-        # maxStatsLength = 0
-        # # assume when revert unexpectedly, we get fewer stats than when revert with stats
-        # for ret in result:
-        #     # print(ret)
-        #     stats = [int(s) for s in re.findall(r'[\d]+',  ret)]
-        #     # print(stats)
-        #     if len(stats) > maxStatsLength:
-        #         maxStatsLength = len(stats)
-        # if maxStatsLength == 0:
-        #     return []
-
-        # print(" = =============")
-        # print(self.dataPoints)
-        # counter = 0
-        for ret in result:
-            stats = [int(s) for s in re.findall(r'[\d]+',  ret)]
-            if "FlashSyn" not in ret:
-                self.dataPoints[stats[-1]][1] = None
-                continue
-
-            elif len(stats) > 1:
-                # if counter < 5:
-                #     print(stats)
-                #     counter += 1
-                self.dataPoints[stats[-1]][1] = stats[:-1]
-                # if len(stats) == 2 and stats[0] == 20:
-                #     print("now is the time")
-
-            else:
-                # print(stats[-1])
-                self.dataPoints[stats[-1]][1] = None
-
-        return self.dataPoints
+        return parse_datapoints(output.stdout, self.dataPoints)
 
         # Example: [input parameters], [output parameters]
         # [[[28000299813908753, 3412170442167358], [3917983816717, 6062616627188784794744528, 495189751117167573091345]],

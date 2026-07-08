@@ -1,3 +1,16 @@
+"""Storage read/write dependency analysis between protocol actions.
+
+Runs the Foundry harness twice per action: pass 1 (executeAndParseRelevantAddresses)
+scrapes the addresses each action touches; pass 2 (collectAccessInfo) inserts
+vm.record()/vm.accesses() and scrapes the read/write storage slots. Two actions are
+dependent when one reads a slot the other writes.
+
+Modernised for forge >= 1.x. The 2021-era code scraped ANSI-coloured `-vvv` text; a
+piped modern forge emits no colour, so this parses the plain decoded `-vvvv` trace
+instead. The load-bearing details (all learned the hard way against forge 1.7.1) are
+commented inline: the trace-form `SEPARATOR`, the EIP-55 checksum address filter, and
+the `-vvvv` requirement in `_run_forge`.
+"""
 import copy
 import sys
 import os
@@ -47,6 +60,34 @@ def hasAddress(string, addresses):
     return None
 
 
+# Marker strings in modern forge (>=1.x) `-vvvv` traces. Piped output carries no
+# ANSI color codes, so we match the decoded text forge prints. The separators are
+# emitted from the test as `emit log("...Separator...")` and render inside the
+# Traces block as `emit log(val: "...Separator...")` — the trailing `")` only
+# appears in the trace form, never in the plain Logs block, so splitting on it
+# selects trace sections without double-counting the Logs echo.
+SEPARATOR = 'Separator ==================")'
+ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;]*m')
+
+
+def _decode(stdout: bytes) -> str:
+    text = stdout.decode("utf-8", errors="replace") if isinstance(stdout, (bytes, bytearray)) else stdout
+    return ANSI_ESCAPE.sub("", text)
+
+
+def _run_forge(command: str) -> str:
+    """Run a forge command under foundryModule at full trace verbosity.
+
+    dependencyCheck needs `-vvvv` so the traces include the action calls and the
+    `vm.accesses` staticcall return values; append it if the caller didn't.
+    """
+    if "-vvvv" not in command:
+        command = command + " -vvvv"
+    output = subprocess.run(command, capture_output=True,
+                            shell=True, cwd=project_path + "/src/foundryModule/")
+    return _decode(output.stdout)
+
+
 # def parseExecutionTrace(trace, address, functionName)::
 
 
@@ -72,30 +113,24 @@ def executeAndParseRelevantAddresses(command: str, overideFuncName=None):
     with open(path, 'w') as file:
         file.write(new_content)
 
-    output = subprocess.run(command, capture_output=True,
-                            shell=True, cwd=project_path + "/src/foundryModule/")
+    message = _run_forge(command)
+    messages = message.split(SEPARATOR)
 
-    message = str(output.stdout)
-    separator = ": =================== Separator =================="
-    messages = message.split(separator)
-
-    # only needd messages[1], messages[3], messages[5], messages[7], ...
+    # each action is wrapped by a pair of separators, so the action bodies are the
+    # odd-indexed segments (messages[1], messages[3], ...).
     messages = messages[1::2]
-    # print(len(messages))
 
     countr = 0
     for message in messages:
-        # print(message)
-        # print("\n=====================================================\n")
-        start = "x1b[0m::\\x1b[32m"
-        end = "\\x1b[0m("
-
-        startPos = message.find(start)
-
-        endPos = message[startPos:].find(end) + startPos
-
-        # find funcName between first start and first end
-        funcName = message[startPos + len(start):  endPos]
+        # first `::funcName(` in the section is the section's top-level call, e.g.
+        # a trace line `[22492] Vault::poke(42)`. NOTE: this is only a human-facing
+        # label for the printed dependency report; the actual dependency analysis
+        # uses the storage read/write maps below, never funcName. It can therefore
+        # be a cheatcode: an action whose first line is `vm.stopPrank()` (e.g.
+        # euler's liquidate) is labelled "stopPrank". vm.record/vm.accesses are
+        # stripped above before this pass, so they never win the match.
+        m = re.search(r'::(\w+)\(', message)
+        funcName = m.group(1) if m else ""
 
         if overideFuncName != None:
             funcName = overideFuncName[countr]
@@ -103,23 +138,17 @@ def executeAndParseRelevantAddresses(command: str, overideFuncName=None):
 
         thisAction = Action(funcName)
 
-        # print(funcName)
-        # find related addresses
-        # find all locations of "] \x1b[32m0x"
-
-        # print(message)
-        start = "x1b\[32m0x"
-        res = [i.start() for i in re.finditer(start, message)]
-
-        for r in res:
-            address = message[r + len(start) - 3: r + len(start) + 39]
-            if Web3.is_address(address):
-                # print(address)
-                if address not in thisAction.relatedAddresses:
-                    thisAction.relatedAddresses.append(address)
+        # forge prints decoded addresses in EIP-55 checksummed (mixed-case) form,
+        # whereas raw hex data (calldata / storage words) is lowercase. Requiring a
+        # valid checksum keeps genuine addresses and rejects lowercase 40-hex data.
+        # The lookarounds stop the match from grabbing a 40-char prefix of a longer
+        # (e.g. 64-hex) word. These addresses get inlined into Solidity as address
+        # literals, so they must be checksummed or solc rejects them.
+        for m in re.finditer(r'(?<![0-9a-fA-F])0x[0-9a-fA-F]{40}(?![0-9a-fA-F])', message):
+            address = m.group(0)
+            if Web3.is_checksum_address(address) and address not in thisAction.relatedAddresses:
+                thisAction.relatedAddresses.append(address)
         outputActions.append(thisAction)
-        # print("\n ========================= \n")
-        # 0xEb91861f8A4e1C12333F42DCE8fB0Ecdc28dA716
     return outputActions
 
 
@@ -260,46 +289,40 @@ def collectAccessInfo(command, ActionLists):
 
 def collectAccessInfoOnce(command, ActionLists):
 
-    output = subprocess.run(command, capture_output=True,
-                            shell=True, cwd=project_path + "/src/foundryModule/")
+    message = _run_forge(command)
+    messages = message.split(SEPARATOR)
 
-    message = str(output.stdout)
-    separator = ": =================== Separator =================="
-    messages = message.split(separator)
-
-    # only needd messages[1], messages[3], messages[5], messages[7], ...
+    # only need the action bodies (odd-indexed segments), same as the first pass.
     messages = messages[1::2]
-    # print(len(messages))
 
-    assert len(messages) == len(ActionLists)
+    if len(messages) != len(ActionLists):
+        sys.exit("dependencyCheck Error: parsed {} action sections but expected {} "
+                 "(forge trace format mismatch?)".format(len(messages), len(ActionLists)))
 
     ActionListsIndex = 0
 
     for ii in range(len(messages)):
 
         message = messages[ii]
-        # print(message)
-        lines = message.split("\\n")
+        lines = message.split("\n")
         for ii in range(len(lines)):
             line = lines[ii]
-            if "34maccesses" in line:
+            # a vm.accesses cheatcode call renders as `VM::accesses(<addr>) [staticcall]`
+            # with the storage result on the following `← [Return] [reads], [writes]` line.
+            if "VM::accesses(" in line:
                 address = hasAddress(
                     line, ActionLists[ActionListsIndex].relatedAddresses)
                 if address == None:
                     sys.exit("dependencyCheck Error: address not found")
                 line = lines[ii + 1]
-                if "[], []" in line:
+                # capture the two bracketed lists after `[Return]`
+                m = re.search(r'\[Return\]\s*(\[.*?\]),\s*(\[.*?\])', line)
+                if m is None:
                     ActionLists[ActionListsIndex].addReadAccess(address, [])
                     ActionLists[ActionListsIndex].addWriteAccess(address, [])
                     continue
-                # line is a string like "[addressA, addressB, addressC], [addressD, addressE, addressF]"
-                # return [addressA, addressB, addressC], [addressD, addressE, addressF]
-
-                readList = line[line.find("0m[") + 3: line.find("], ")]
-                writeList = line[line.find(", [", line.find("], ")) + 1:]
-
-                # print("readList: ", readList)
-                # print("writeList: ", writeList)
+                readList = m.group(1)
+                writeList = m.group(2)
 
                 readstorages = getStorage(readList)
                 ActionLists[ActionListsIndex].addReadAccess(

@@ -1,9 +1,8 @@
 import subprocess
 import os
-import re
-import codecs
 import config
 import toml
+from forge.forgeJson import parse_datapoints
 settings = toml.load("settings.toml")
 
 
@@ -296,75 +295,17 @@ contract attackTester is DSTest, stdCheats {
             endPoint = settings["settings"]["FantomRpcProvider"]
 
 
+        # `--json` gives structured per-test results; see forge/forgeJson.py for why
+        # we consume that instead of scraping forge's (now colourless) text output.
         command = "forge test --match-contract attackTester --fork-url " + \
-            endPoint + " --fork-block-number " + str(self.blockNum - 1)
+            endPoint + " --fork-block-number " + str(self.blockNum - 1) + " --json"
         output = subprocess.run(command, capture_output=True,
                                 shell=True, cwd=project_path + "/src/foundryModule/")
-        message = str(output.stdout)
 
         print(command)
-        print(message[:150])
+        print(str(output.stdout)[:150])
 
-        # print("message: ")
-        # print(repr(message))
-
-        statsStrStart = message.find("Running")
-        statsStrEnd = message.find("Encountered a total of")
-
-        statsStr = message[statsStrStart: statsStrEnd]
-
-        # print(statsStr)
-
-        statsStr = codecs.getdecoder("unicode_escape")(statsStr)[0]
-
-        ansi_escape = re.compile(r'''
-            \x1B  # ESC
-            (?:   # 7-bit C1 Fe (except CSI)
-                [@-Z\\-_]
-            |     # or [ for CSI, followed by a control sequence
-                \[
-                [0-?]*  # Parameter bytes
-                [ -/]*  # Intermediate bytes
-                [@-~]   # Final byte
-            )
-        ''', re.VERBOSE)
-        statsStr = ansi_escape.sub('', statsStr)
-
-        result = re.findall('FAIL. Reason: (.*) \(gas\: ', statsStr)
-
-        # print(result)
-
-        # print("self.dataPoints: ", self.dataPoints)
-
-        # maxStatsLength = 0
-        # # assume when revert unexpectedly, we get fewer stats than when revert with stats
-        # for ret in result:
-        #     # print(ret)
-        #     stats = [int(s) for s in re.findall(r'[\d]+',  ret)]
-        #     # print(stats)
-        #     if len(stats) > maxStatsLength:
-        #         maxStatsLength = len(stats)
-
-        # print(" = =============")
-        # print(self.dataPoints)
-        # counter = 0
-        for ret in result:
-            stats = [int(s) for s in re.findall(r'[\d]+',  ret)]
-            if "FlashSyn" not in ret:
-                self.dataPoints[stats[-1]][1] = None
-                continue
-            elif len(stats) > 1:
-                # if counter < 5:
-                #     print(stats)
-                #     counter += 1
-                self.dataPoints[stats[-1]][1] = stats[:-1]
-                # if len(stats) == 2 and stats[0] == 20:
-                #     print("now is the time")
-            else:
-                self.dataPoints[stats[-1]][1] = None
-
-        # print(self.dataPoints)
-        return self.dataPoints
+        return parse_datapoints(output.stdout, self.dataPoints)
 
         # Example: [input parameters], [output parameters]
         # [[[28000299813908753, 3412170442167358], [3917983816717, 6062616627188784794744528, 495189751117167573091345]],
