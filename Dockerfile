@@ -28,6 +28,11 @@ RUN mkdir -p /out && cp /root/.foundry/bin/forge /out/ \
       && cp /root/.foundry/bin/anvil /out/ 2>/dev/null || true
 
 # ---------- Foundry: pinned commit, built from source ----------
+# KNOWN BROKEN at commit 5be158b (verified 2026-07): a build dependency, svm-rs-builds,
+# code-generates solc-version constants from the current release list and now collides on
+# solc versions released after 2023 (E0428: SOLC_VERSION_0_8_35 defined twice). foundryup
+# also no longer offers prebuilt-by-commit binaries. Getting the exact 2023 forge is not
+# practical today; the real path is modernizing FlashSyn's forge-output parsers (forge --json).
 FROM --platform=linux/amd64 rust:${RUST_VERSION}-slim-bookworm AS foundry-pinned-source
 ARG FOUNDRY_COMMIT
 RUN apt-get update && apt-get install -y --no-install-recommends \

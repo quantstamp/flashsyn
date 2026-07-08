@@ -95,9 +95,16 @@ need parser tweaks. For byte-for-byte fidelity, build the upstream-pinned 2023 c
 docker build --build-arg FOUNDRY_INSTALL=pinned-source -t flashsyn:pinned .
 ```
 
-This clones Foundry at commit `5be158b` and compiles it with Rust — slower, and not guaranteed to
-build with a modern toolchain (`RUST_VERSION` and `FOUNDRY_COMMIT` are overridable build args). Treat
-it as the fidelity option; `latest` is the default.
+This clones Foundry at commit `5be158b` and compiles it with Rust (`RUST_VERSION`/`FOUNDRY_COMMIT`
+are overridable build args).
+
+> **Known broken (verified 2026-07).** The source build at `5be158b` fails: a build dependency
+> (`svm-rs-builds`) code-generates solc-version constants from the current release list and now
+> collides on solc versions released after 2023 (`E0428: SOLC_VERSION_0_8_35 defined twice`).
+> `foundryup -C <commit>` also no longer offers prebuilt-by-commit binaries. Practically, the exact
+> 2023 forge can't be reproduced today — so the real fix is to **modernize FlashSyn's forge-output
+> parsers** (`dependencyCheck.py`, `forge/forgeCollectDVD.py`) to consume `forge test --json`
+> instead of scraping colored `-vvv` text.
 
 **Verification status.** Built and smoke-tested on an arm64 host (amd64 emulation): the image builds,
 `forge --version` runs, the Python engine + both templates import cleanly, and `run.sh` works. What is
