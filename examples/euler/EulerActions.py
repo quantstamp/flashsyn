@@ -173,25 +173,29 @@ contract euler is DSTest, stdCheats {
 
     # TODO. 
     # After executing initialPass(), paste the data points printed to this function.
-    def runinitialPass():
+    @classmethod
+    def runinitialPass(cls):
+        # Build one approximator per terminal action from the collected data.
+        # The action sequence comes from each file's saved payload (names), and
+        # classes are resolved via the registry (cls.action_by_name) — not by
+        # splitting the pkl filename on "_" or looking names up in globals().
         map = loadDataPoints()
         helpMap = {}
         for key in map.keys():
-            parts = key.split('_')
-            actionStr = parts[-1]
-            actionList = []
-            for class_name in parts:
-                obj = globals()[class_name]
-                actionList.append(obj)
-            if len(map[key][0]) > 0:
-                if actionStr not in helpMap.keys():
-                    helpMap[actionStr] = {}
-                helpMap[actionStr][key] = (actionList, map[key])
-        for key in helpMap.keys():
-            temp = NumericalApproximatorsPro( helpMap[key] )
-            cls = globals()[key]
-            cls.approximators = temp
-            cls.approximators.refreshTransitFormula()
+            payload = map[key]
+            if len(payload) < 3:
+                sys.exit("stale data file '{}.pkl' (pre-registry format); "
+                         "re-run data collection".format(key))
+            points, values, names = payload[0], payload[1], payload[2]
+            actionStr = names[-1]
+            actionList = [cls.action_by_name(n) for n in names]
+            if len(points) > 0:
+                helpMap.setdefault(actionStr, {})[key] = (actionList, [points, values])
+        for actionStr in helpMap.keys():
+            approx = NumericalApproximatorsPro(helpMap[actionStr])
+            target = cls.action_by_name(actionStr)
+            target.approximators = approx
+            target.approximators.refreshTransitFormula()
 
 
 class eulerDeposit(eulerAction):

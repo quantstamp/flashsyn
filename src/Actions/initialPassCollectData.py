@@ -353,11 +353,14 @@ def createCacheFolder():
         os.makedirs(path)
 
 def storeDataPoints(ActionList, points: list, values: list, append: bool = False):
-    """Given an action list, store the data into corresponding cache files"""
-    name = ""
-    for action in ActionList:
-        name += action.__name__ + "_"
-    name = name[:-1]
+    """Given an action list, store the data into corresponding cache files.
+
+    The payload is [points, values, names]; `names` (the action __name__s) is the
+    authoritative sequence, so loaders no longer parse it back out of the filename.
+    The filename is still the "_"-joined names, but only for human browsing now.
+    """
+    names = [action.__name__ for action in ActionList]
+    name = "_".join(names)
     path = os.path.dirname(os.path.dirname(SCRIPT_DIR)) + "/initialDataPoints/" + \
         config.benchmarkName + "/" + name + ".pkl"
 
@@ -366,7 +369,8 @@ def storeDataPoints(ActionList, points: list, values: list, append: bool = False
 
     if os.path.exists(path) and append:
         with open(path, 'rb') as f:
-            old_points, old_values = pickle.load(f)
+            payload = pickle.load(f)
+            old_points, old_values = payload[0], payload[1]
             new_points = old_points + points
             new_values = old_values
             for i in range(len(old_values)):
@@ -376,7 +380,7 @@ def storeDataPoints(ActionList, points: list, values: list, append: bool = False
         new_values = values
 
     with open(path, 'wb') as f:
-        pickle.dump([new_points, new_values], f)
+        pickle.dump([new_points, new_values, names], f)
     
 def loadDataPoints():
     path = os.path.dirname(os.path.dirname(SCRIPT_DIR)) + "/initialDataPoints/" + \

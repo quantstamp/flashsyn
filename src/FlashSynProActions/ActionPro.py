@@ -42,6 +42,27 @@ class ActionPro():
     
 
     @classmethod
+    def action_by_name(cls, name):
+        """Resolve an action class by its __name__ from the ActionPro subclass tree.
+
+        Replaces `globals()[name]` lookups: those only saw the caller module's
+        namespace, coupling saved data files to source symbol locations. This
+        walks every ActionPro subclass instead, so any defined action is found
+        regardless of which module it or the caller lives in.
+        """
+        stack = list(ActionPro.__subclasses__())
+        seen = set()
+        while stack:
+            sub = stack.pop()
+            if sub in seen:
+                continue
+            seen.add(sub)
+            if sub.__name__ == name:
+                return sub
+            stack.extend(sub.__subclasses__())
+        raise KeyError("no ActionPro subclass named {!r}".format(name))
+
+    @classmethod
     def resetBalances(cls):
         cls.currentBalances = cls.initialBalances.copy()
 
