@@ -14,6 +14,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 # print(sys.path)
 
+from conventions import check_placeholder_count
 from forge.forgeCollectDVD import *
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
@@ -120,7 +121,10 @@ def buildCollectorContract(startStr_attack, ActionList, endStr_attack):
     for i in range(len(ActionList) - 1):
         temp = ActionList[i].actionStr()
 
+        check_placeholder_count(ActionList[i].__name__, temp, ActionList[i].numInputs)
         for _ in range(ActionList[i].numInputs):
+            if input_string_ptr >= len(insert_inside_strings):
+                raise ValueError("attack exceeds the {}-parameter pool".format(len(insert_inside_strings)))
             temp = temp.replace(
                 '$$', insert_inside_strings[input_string_ptr], 1)
             input_string_ptr += 1
@@ -129,7 +133,10 @@ def buildCollectorContract(startStr_attack, ActionList, endStr_attack):
 
     temp = ActionList[-1].collectorStr()
 
+    check_placeholder_count(ActionList[-1].__name__, temp, ActionList[-1].numInputs)
     for _ in range(ActionList[-1].numInputs):
+        if input_string_ptr >= len(insert_inside_strings):
+            raise ValueError("attack exceeds the {}-parameter pool".format(len(insert_inside_strings)))
         temp = temp.replace('$$', insert_inside_strings[input_string_ptr], 1)
         input_string_ptr += 1
 
@@ -138,6 +145,8 @@ def buildCollectorContract(startStr_attack, ActionList, endStr_attack):
     for i in range(input_string_ptr):
         input_attack += input_strings[i]
 
+    if input_string_ptr > 0 and "$$_$$" not in collectorStr:
+        raise ValueError("attack signature is missing the $$_$$ parameter marker")
     collectorStr = collectorStr.replace("$$_$$", input_attack, 1)
     collectorStr += allActionStr
     collectorStr += endStr_attack
@@ -156,7 +165,10 @@ def buildAttackContract(startStr_attack, ActionList, endStr_attack):
     for i in range(len(ActionList)):
         temp = ActionList[i].actionStr()
 
+        check_placeholder_count(ActionList[i].__name__, temp, ActionList[i].numInputs)
         for _ in range(ActionList[i].numInputs):
+            if input_string_ptr >= len(insert_inside_strings):
+                raise ValueError("attack exceeds the {}-parameter pool".format(len(insert_inside_strings)))
             temp = temp.replace(
                 '$$', insert_inside_strings[input_string_ptr], 1)
             input_string_ptr += 1
@@ -166,6 +178,8 @@ def buildAttackContract(startStr_attack, ActionList, endStr_attack):
     for i in range(input_string_ptr):
         input_attack += input_strings[i]
 
+    if input_string_ptr > 0 and "$$_$$" not in attackStr:
+        raise ValueError("attack signature is missing the $$_$$ parameter marker")
     attackStr = attackStr.replace("$$_$$", input_attack, 1)
     attackStr += allActionStr
     attackStr += endStr_attack

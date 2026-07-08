@@ -47,6 +47,8 @@ class forgedataCollectContractDVD:
         ## replace $$ in contract with insert_inside_strings
         input_string_ptr = 0
         while "$$" in contract:
+            if input_string_ptr >= len(insert_inside_strings):
+                raise ValueError("attack exceeds the {}-parameter pool".format(len(insert_inside_strings)))
             contract = contract.replace('$$', insert_inside_strings[input_string_ptr], 1)
             input_string_ptr += 1
 
@@ -73,6 +75,8 @@ class forgedataCollectContractDVD:
         ## replace $$ in contract with insert_inside_strings
         input_string_ptr = 0
         while "$$" in contract:
+            if input_string_ptr >= len(insert_inside_strings):
+                raise ValueError("attack exceeds the {}-parameter pool".format(len(insert_inside_strings)))
             contract = contract.replace('$$', insert_inside_strings[input_string_ptr], 1)
             input_string_ptr += 1
         argument_str = ""
