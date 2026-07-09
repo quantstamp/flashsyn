@@ -26,6 +26,7 @@ examples/
   euler/                                       # worked example (opt-in, not on the default path)
   harvest_usdt/                                # worked example — Harvest Finance fUSDC leg (2020)
   harvest_usdc/                                # worked example — Harvest Finance fUSDT leg (2020)
+  puppet/                                      # worked example — Damn Vulnerable DeFi "Puppet" (local deploy)
 ```
 
 ## What you author
@@ -85,6 +86,18 @@ block 11129500). Both are Curve-price-manipulation → vault-mispricing attacks 
 four actions each. Run with `python3 flashsyn.py collect harvest_usdt` then
 `python3 flashsyn.py synthesize harvest_usdt` (likewise `harvest_usdc`) — no file
 copying. Both are verified end-to-end (FlashSyn rediscovers each exploit).
+
+A **Damn Vulnerable DeFi** example lives in [`examples/puppet/`](examples/puppet/README.md):
+the "Puppet" challenge, whose lending pool prices DVT off a Uniswap V1 spot oracle. Unlike
+the mainnet examples it **deploys the whole scenario locally in `setUp()`** (DVT + a Uniswap
+V1 exchange via `deployCode` + the pool), so the fork block is arbitrary. It is a Python
+action model like Euler, because the pool's `borrow` action can't be expressed as a manifest
+(its ETH collateral is an approximated function of the manipulated price, not a search
+parameter — see the example's README). The two Uniswap V1 Vyper build artifacts it deploys
+are vendored under `src/foundryModule/src/build-uniswap/v1/`. Run with
+`python3 flashsyn.py collect puppet` then `python3 flashsyn.py synthesize puppet`.
+Verified end-to-end (block 16818064): FlashSyn rediscovers the exploit — vector
+`SwapUniswapDVT2ETH → PoolBorrow`, **Best Profit 89,000**, parameters `[999, 99999]`.
 
 ## Docker
 
