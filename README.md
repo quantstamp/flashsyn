@@ -33,8 +33,10 @@ examples/
 1. **A Foundry test** — copy `src/foundryModule/src/test/template.t.sol` to `attack.t.sol`, fill in
    the interfaces, `setUp()`, and one `testExample()` per action. Forks the chain at the exploit block.
 2. **A Python action model** — copy `src/FlashSynProActions/template.py`, fill the numbered TODOs:
-   initial balances, token prices, and one subclass per protocol action (`actionStr`, `collectorStr`,
-   `tokensIn/Out`, `range`, `transit`).
+   initial balances, token prices, a `tokenInfo` map (token → Solidity variable + decimals), and one
+   subclass per protocol action (`actionStr`, `tokensIn/Out`, `range`). The data collector and the
+   balance `transit()` are derived automatically from `tokensIn/Out` + `tokenInfo`; only write your
+   own `collectorStr`/`transit` for an exotic action whose output isn't a simple balance delta.
 
 ## Run procedure
 

@@ -26,6 +26,8 @@ class HarvestUSDCAction(ActionPro):
 
     TargetTokens = TokenPrices.keys()    # Don't change: tokens of interest
 
+    tokenInfo = {"USDT": ("USDT", 6), "USDC": ("USDC", 6), "fUSDT": ("fUSDT", 6)}
+
     # No start_str literal: the engine reads the harness preamble straight from
     # examples/harvest_usdc/attack.t.sol (copied into src/foundryModule/src/test/).
     # See ActionPro.start_str and forge/forgeCollectDVD.py.
@@ -93,22 +95,7 @@ class Curve_USDC2USDT(HarvestUSDCAction):
         '''
         return action
 
-    @classmethod
-    def collectorStr(cls):
-        action = '''        // Collect Curve_USDC2USDT: USDC --> USDT
-        uint USDTgot = USDT.balanceOf(address(attacker));
-        CURVE.exchange_underlying(1, 2, $$ * 1e6, 0);
-        USDTgot = USDT.balanceOf(address(attacker)) - USDTgot;
-        revert(Strings.append("FlashSyn: ", USDTgot / 1e6));
-        '''
-        return action
 
-    @classmethod
-    def transit(cls, inputs, actionList):
-        cls.currentBalances["USDC"] -= inputs[-1]
-        output0 = cls.simulate(inputs, actionList)[0]
-        cls.currentBalances["USDT"] += output0
-        return
 
 
 class Curve_USDT2USDC(HarvestUSDCAction):
@@ -126,22 +113,7 @@ class Curve_USDT2USDC(HarvestUSDCAction):
         '''
         return action
 
-    @classmethod
-    def collectorStr(cls):
-        action = '''        // Collect Curve_USDT2USDC: USDT --> USDC
-        uint USDCgot = USDC.balanceOf(address(attacker));
-        CURVE.exchange_underlying(2, 1, $$ * 1e6, 0);
-        USDCgot = USDC.balanceOf(address(attacker)) - USDCgot;
-        revert(Strings.append("FlashSyn: ", USDCgot / 1e6));
-        '''
-        return action
 
-    @classmethod
-    def transit(cls, inputs, actionList):
-        cls.currentBalances["USDT"] -= inputs[-1]
-        output0 = cls.simulate(inputs, actionList)[0]
-        cls.currentBalances["USDC"] += output0
-        return
 
 
 class fUSDT_deposit(HarvestUSDCAction):
@@ -159,24 +131,7 @@ class fUSDT_deposit(HarvestUSDCAction):
         '''
         return action
 
-    @classmethod
-    def collectorStr(cls):
-        action = '''        // Collect fUSDT_deposit: USDT --> fUSDT
-        uint fUSDTgot = fUSDT.balanceOf(address(attacker));
-        fUSDT.deposit($$ * 1e6);
-        fUSDTgot = fUSDT.balanceOf(address(attacker)) - fUSDTgot;
-        revert(Strings.append("FlashSyn: ", fUSDTgot / 1e6));
-        '''
-        return action
 
-    @classmethod
-    def transit(cls, inputs, actionList):
-        cls.currentBalances["USDT"] -= inputs[-1]
-        output0 = cls.simulate(inputs, actionList)[0]
-        if "fUSDT" not in cls.currentBalances:
-            cls.currentBalances["fUSDT"] = 0
-        cls.currentBalances["fUSDT"] += output0
-        return
 
 
 class fUSDT_withdraw(HarvestUSDCAction):
@@ -194,22 +149,7 @@ class fUSDT_withdraw(HarvestUSDCAction):
         '''
         return action
 
-    @classmethod
-    def collectorStr(cls):
-        action = '''        // Collect fUSDT_withdraw: fUSDT --> USDT
-        uint USDTgot = USDT.balanceOf(address(attacker));
-        fUSDT.withdraw($$ * 1e6);
-        USDTgot = USDT.balanceOf(address(attacker)) - USDTgot;
-        revert(Strings.append("FlashSyn: ", USDTgot / 1e6));
-        '''
-        return action
 
-    @classmethod
-    def transit(cls, inputs, actionList):
-        cls.currentBalances["fUSDT"] -= inputs[-1]
-        output0 = cls.simulate(inputs, actionList)[0]
-        cls.currentBalances["USDT"] += output0
-        return
 
 
 # Longest attack sequence the synthesizer searches (the known exploit is length 4).

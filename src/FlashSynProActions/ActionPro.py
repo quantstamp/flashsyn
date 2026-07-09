@@ -32,6 +32,12 @@ class ActionPro():
     # set it to a literal to override that (the Euler example still does).
     start_str = ''
 
+    # Per-token Solidity metadata for the auto-generated collector:
+    #   {"USDC": ("USDC", 6)} = (the token's contract variable in the harness, its decimals).
+    # Set this on the action wrapper so a plain swap/deposit/withdraw action only has
+    # to write actionStr() — collectorStr() and transit() are derived from it below.
+    tokenInfo = {}
+
     @classmethod
     def string(cls):
         return cls.__name__
@@ -151,3 +157,43 @@ class ActionPro():
     @classmethod
     def simulate(cls, inputs, actionList):
         return cls.approximators(inputs, actionList)
+
+    @classmethod
+    def collectorStr(cls):
+        """Default data collector: measure each output token's balance delta.
+
+        Wraps actionStr() between balance reads and reverts with the deltas after
+        the FlashSyn marker — so a plain swap/deposit/withdraw action only writes
+        actionStr(). Derived from tokensOut + tokenInfo. Override for an action
+        whose measurable output isn't a simple attacker-balance delta.
+        """
+        if not cls.tokensOut:
+            raise NotImplementedError(
+                "{}: default collectorStr needs tokensOut; give the action its own "
+                "collectorStr()".format(cls.__name__))
+        reads = ""
+        revert = None
+        for i, tok in enumerate(cls.tokensOut):
+            var, dec = cls.tokenInfo[tok]
+            reads += "        uint _fsOut{} = {}.balanceOf(address(attacker));\n".format(i, var)
+            delta = "({}.balanceOf(address(attacker)) - _fsOut{}) / 1e{}".format(var, i, dec)
+            if revert is None:
+                revert = 'Strings.append("FlashSyn: ", {})'.format(delta)
+            else:
+                revert = "Strings.appendWithSpace({}, {})".format(revert, delta)
+        return "{}{}        revert({});\n".format(reads, cls.actionStr(), revert)
+
+    @classmethod
+    def transit(cls, inputs, actionList):
+        """Default balance transition: consume tokensIn, produce tokensOut.
+
+        The last len(tokensIn) inputs are the consumed amounts (one per input token);
+        simulate() yields the produced amounts for tokensOut, in order. Override for
+        an action that moves funds in a way this 1:1 mapping doesn't capture.
+        """
+        consumed = inputs[-len(cls.tokensIn):] if cls.tokensIn else []
+        for tok, amt in zip(cls.tokensIn, consumed):
+            cls.currentBalances[tok] = cls.currentBalances.get(tok, 0) - amt
+        outputs = cls.simulate(inputs, actionList)
+        for i, tok in enumerate(cls.tokensOut):
+            cls.currentBalances[tok] = cls.currentBalances.get(tok, 0) + outputs[i]

@@ -34,7 +34,13 @@ class protocolAction(ActionPro):
 
     # tokens of interest
     TargetTokens = TokenPrices.keys()    # DON'T CHANGE
-    
+
+    # TODO 3b. Map every token an action moves to its Solidity variable in the harness
+    # and its decimals: {"USDC": ("USDC", 6)}. The default collectorStr() reads
+    # balances via these to measure each action's output, so a plain action only
+    # needs actionStr(). Ex: tokenInfo = {"USDC": ("USDC", 6), "eUSDC": ("eUSDC", 18)}
+    tokenInfo = {}
+
 
 
     # TODO 4. (Optional) The Solidity preamble the collectors are appended to.
@@ -117,34 +123,32 @@ class protocolActionExample(protocolAction):
     tokensOut = []    
     range = []     
 
-    # TODO 7b. Define `action` to be the Solidity code FlashSyn will use to search for inputs to this Action. 
+    # TODO 7b. Define `action` to be the Solidity code FlashSyn will use to search for inputs to this Action.
         # Include a comment with the Action name.
         # Insert dollar signs ($$) as the argument for the value that FlashSyn will approximate.
     @classmethod
     def actionStr(cls):
         action = '''
-        // Action: 
+        // Action:
         '''
         return action
 
-    # TODO 7c. Define `action` to be the Solidity code FlashSyn will use to collect data points for this Action. 
-        # Include a comment with the state change.
-        # Insert dollar signs ($$) as the argument for the value that FlashSyn will approximate.
-
-    @classmethod
-    def collectorStr(cls):
-        action = '''
-        // Collect Action: TokenIn --> TokenOut State: tokenOutBalance
-        revert("FlashSyn" ); //this string must include 'FlashSyn'
-        '''
-        return action 
-
-    # TODO 7d. Define the transit function used by FlashSyn to determine how funds move during this Protocol Action.
-        # Consider all inputs and outputs taking place during this Action.
-        # The template code below represents how this would occur for one asset.
-    @classmethod
-    def transit(cls, inputs, actionList):
-        return  
+    # That's usually all an action needs. Given tokensIn/tokensOut + the wrapper's
+    # tokenInfo, the base class derives BOTH:
+    #   - collectorStr(): wraps actionStr() in balance reads and reverts the output delta
+    #   - transit(): subtracts the tokensIn amounts, adds the simulate() outputs to tokensOut
+    #
+    # TODO 7c (only if needed). Override them for an exotic action — e.g. output that
+    # isn't a simple attacker-balance delta, or funds that move in a non-1:1 way.
+    # The Euler example's liquidation is one such case. Sketch:
+    #
+    #   @classmethod
+    #   def collectorStr(cls):
+    #       return '''<read before> <actionStr body> revert(Strings.append("FlashSyn: ", <delta>));'''
+    #
+    #   @classmethod
+    #   def transit(cls, inputs, actionList):
+    #       ...  # update cls.currentBalances[...] however this action really moves funds
 
 # TODO 8. Include all remaining Protocol Action classes.
 
