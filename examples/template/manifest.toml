@@ -1,0 +1,100 @@
+# =============================================================================
+# FlashSyn benchmark manifest — copy this directory to examples/<your-name>/ and
+# fill it in. The CLI builds the whole action model from this file; the only code
+# you write is the Solidity harness next to it (attack.t.sol). See README.md here.
+#
+# Run it (from the repo root):
+#   python3 flashsyn.py compile    <your-name>   # harness compiles + runs vs the fork
+#   python3 flashsyn.py deps       <your-name>   # (optional) action dependency graph
+#   python3 flashsyn.py collect    <your-name>   # sample the actions -> initialDataPoints/
+#   python3 flashsyn.py synthesize <your-name> > run.log
+# =============================================================================
+
+name = "template"          # benchmark id; also the initialDataPoints/<name>/ folder
+contract = "Template"      # the contract name in attack.t.sol (forge --match-contract)
+chain = "ETH"              # ETH | BSC | Fantom | Polygon  (endpoints in src/foundryModule/run.sh)
+block = 12345678           # fork block, just before the exploit
+max_synthesis_len = 5      # longest action sequence the synthesizer searches
+
+# Which tokens count toward profit, in the SAME ORDER your profitSummary() prints them.
+# profit = sum over these of (final_balance - initial_balance) * price.  (auto-derived)
+profit_tokens = ["TOKENA", "TOKENB"]
+
+# The capital the attacker starts with (as if the flash loan already happened).
+# Must match what setUp() funds in the harness. Values are in whole tokens (no decimals).
+[initial_balances]
+TOKENA = 50000000
+TOKENB = 20000000
+
+# Price of each token of interest at the fork block. Stablecoins = 1.0; use real
+# prices for volatile assets so cross-token profit is weighed correctly.
+[token_prices]
+TOKENA = 1.0
+TOKENB = 1.0
+
+# Every token an action moves -> [its contract variable in attack.t.sol, its decimals].
+# The data collector reads balances through these, so a plain action needs no collector
+# code. Include intermediate tokens too (e.g. vault shares), even if not a profit token.
+[token_info]
+TOKENA = ["TOKENA", 6]
+TOKENB = ["TOKENB", 6]
+vTOKEN = ["VAULT", 18]   # a vault-share token whose variable happens to be named VAULT
+
+# -----------------------------------------------------------------------------
+# One [[actions]] block per protocol action. Order here defines the action list.
+#
+#   name        unique action name
+#   tokens_in   tokens the attacker NET gives up across the whole snippet
+#   tokens_out  tokens the attacker NET receives across the whole snippet
+#   range       [min, max] search range for the parameter (whole-token units)
+#   solidity    the Solidity the action runs. numInputs is inferred from the $$ count.
+#
+# $$ MECHANICS: each $$ becomes an INDEPENDENT search parameter (a, b, c, ...). If the
+# same value is used in two calls, capture it once (uint amt = $$ * 1e6;) — writing $$
+# twice would search two unrelated numbers. Zero $$ is fine (a fixed action).
+# -----------------------------------------------------------------------------
+
+# A single-call swap: one parameter.
+[[actions]]
+name = "swap_A_to_B"
+tokens_in = ["TOKENA"]
+tokens_out = ["TOKENB"]
+range = [0, 20000000]
+solidity = "POOL.exchange(0, 1, $$ * 1e6, 0);"
+
+# A vault deposit: TOKENA in, vault shares out.
+[[actions]]
+name = "vault_deposit"
+tokens_in = ["TOKENA"]
+tokens_out = ["vTOKEN"]
+range = [0, 50000000]
+solidity = "VAULT.deposit($$ * 1e6);"
+
+# A MULTI-CALL action. Any number of statements is allowed. Note the single $$ captured
+# into `amt` and reused, so approve and swap use the SAME searched value (not two).
+# Anything it references (ROUTER, path, block.timestamp) must exist in the harness.
+[[actions]]
+name = "approve_and_swap"
+tokens_in = ["TOKENB"]
+tokens_out = ["TOKENA"]
+range = [0, 20000000]
+solidity = """
+        uint amt = $$ * 1e6;
+        TOKENB.approve(address(ROUTER), amt);
+        ROUTER.swapExactTokensForTokens(amt, 0, path, address(attacker), block.timestamp);
+"""
+
+# A vault withdraw: shares in, TOKENA out.
+[[actions]]
+name = "vault_withdraw"
+tokens_in = ["vTOKEN"]
+tokens_out = ["TOKENA"]
+range = [0, 60000000]
+solidity = "VAULT.withdraw($$);"
+
+# ESCAPE HATCH: if an action's fund movement doesn't fit "the $$ params are the consumed
+# amounts and the outputs go to tokens_out" (e.g. a liquidation that zeroes several
+# balances, like the Euler example), you can't express its transit in the manifest.
+# Delete this manifest and write a Python model instead (see src/FlashSynProActions/
+# template.py) that overrides transit() (and collectorStr() if needed) for that action.
+# The flashsyn CLI auto-detects which style the example uses.

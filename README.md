@@ -30,13 +30,21 @@ examples/
 
 ## What you author
 
-1. **A Foundry test** — copy `src/foundryModule/src/test/template.t.sol` to `attack.t.sol`, fill in
-   the interfaces, `setUp()`, and one `testExample()` per action. Forks the chain at the exploit block.
-2. **A Python action model** — copy `src/FlashSynProActions/template.py`, fill the numbered TODOs:
-   initial balances, token prices, a `tokenInfo` map (token → Solidity variable + decimals), and one
-   subclass per protocol action (`actionStr`, `tokensIn/Out`, `range`). The data collector and the
-   balance `transit()` are derived automatically from `tokensIn/Out` + `tokenInfo`; only write your
-   own `collectorStr`/`transit` for an exotic action whose output isn't a simple balance delta.
+Copy [`examples/template/`](examples/template/) to `examples/<name>/` — a fully commented
+starting point — and fill in its two files:
+
+1. **`attack.t.sol`** — the Foundry harness: interfaces, a `setUp()` that funds the attacker with the
+   flash-loan capital and sets approvals, and a `profitSummary()`. The only code you write.
+2. **`manifest.toml`** — the benchmark as data: chain/block/contract, initial balances, token prices,
+   `token_info` (token → Solidity variable + decimals), and one entry per action (`tokens_in/out`,
+   `range`, and the Solidity call). The engine builds the action model from it — `numInputs`, the data
+   collector, the balance `transit()`, `calcProfit`, and the dependency graph are all derived.
+
+For an action whose fund movement doesn't fit that model (e.g. a liquidation that zeroes several
+balances, like Euler), write a Python action model instead — copy `src/FlashSynProActions/template.py`
+and override `transit()`/`collectorStr()` for that action. The CLI auto-detects which style an
+example uses. `examples/template/README.md` walks through the whole flow, `$$` semantics, and
+multi-call actions.
 
 ## Run procedure
 
