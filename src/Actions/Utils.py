@@ -54,7 +54,7 @@ class BarebonesNearestNDInterpolator(NearestNDInterpolator):
         return self.values[i]
 
 
-def intepolateFunction(points, values, indexes=[]):
+def interpolateFunction(points, values, indexes=[]):
     # print("points=", points)
     if len(indexes) != 0:
         newpoints = getPointsFromIndexes(points, indexes)
@@ -62,7 +62,7 @@ def intepolateFunction(points, values, indexes=[]):
     return BarebonesNearestNDInterpolator(points, values, rescale=True)
 
 
-def LinearintepolateFunction(points, values, indexes=[], verbose=False):
+def LinearinterpolateFunction(points, values, indexes=[], verbose=False):
     if len(indexes) != 0:
         newpoints = getPointsFromIndexes(points, indexes)
         return LinearNDInterpolator(newpoints, values, rescale=True)
@@ -95,11 +95,11 @@ def combinedIntepolate(Linear_f, f, point, indexes=[]):
     return value
 
 
-def intepolateFunction1d(points, values):
+def interpolateFunction1d(points, values):
     return interp1d(points, values, kind='nearest', fill_value='extrapolate')
 
 
-def LinearintepolateFunction1d(points, values):
+def LinearinterpolateFunction1d(points, values):
     return interp1d(points, values, kind='linear', fill_value='extrapolate')
 
 
@@ -479,7 +479,7 @@ def AddDatapoints(cA, datapoints):
     for datapoint in datapoints:
         if datapoint[1] == None or len(datapoint[1]) != maxStatsLength:
             continue
-        if cA[-1].add1PointValue(datapoint[0], datapoint[1]) == 1:
+        if cA[-1].addDataPoint(datapoint[0], datapoint[1]) == 1:
             count += 1
     return count
 
@@ -551,7 +551,7 @@ def checkAndAddDatapoints(cA, ActionWrapper, datapoints, show=False):
             if allSame:
                 continue
             else:
-                if cA[-1].add1PointValue(datapoint[0], datapoint[1], cA) == 1:
+                if cA[-1].addDataPoint(datapoint[0], datapoint[1], cA) == 1:
                     if show:
                         print("For action ", cA[-1], " add data point: ", datapoint)
                     count += 1

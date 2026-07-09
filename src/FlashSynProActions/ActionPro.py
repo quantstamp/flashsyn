@@ -45,14 +45,6 @@ class ActionPro():
     def string(cls):
         return cls.__name__
 
-    @classmethod
-    def __str__(cls):
-        return cls.__name__
-    
-    def __str__(self):
-        return  self.__name__
-    
-
     def __str__(self):
         return self.__name__
     
@@ -169,11 +161,11 @@ class ActionPro():
     
 
     @classmethod
-    def add1PointValue(cls, inputs, values, actionList):
+    def addDataPoint(cls, inputs, values, actionList):
         if values == None: 
             return
         values = cls.aliquotValues(values)
-        return cls.approximators.add1PointValue( inputs, values, actionList )
+        return cls.approximators.addDataPoint( inputs, values, actionList )
 
     @classmethod
     def refreshTransitFormula(cls):

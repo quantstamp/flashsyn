@@ -18,7 +18,6 @@ import {Strings} from "mylib/StringCon.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/security/ReentrancyGuard.sol";
 import {Address} from "openzeppelin-contracts/utils/Address.sol";
-import "ds-test/test.sol";
 
 
 // --- Damn Vulnerable DeFi contracts (inlined, verbatim from the DVD suite) ---------

@@ -13,21 +13,6 @@ class Adapter():
         self.dependencyMap = copy.deepcopy(dependencyMap)
         # action.__name__ -> num 
 
-    def simplify(self, actionList):
-        ## Filter out unnecessary actions
-        ## And return the simplified data point
-
-        lastAction = actionList[-1]
-
-        newActionList = [actionList[-1]]
-        relatedActions = self.dependencyMap[lastAction]
-        for ii in range(len(actionList) - 2, -1, -1):
-            if actionList[ii].__name__ in relatedActions:
-                newActionList.insert(0, actionList[ii])
-                relatedActions += self.dependencyMap[actionList[ii]]
-        return newActionList
-    
-
     def simplify(self, point, actionList):
         lastAction = actionList[-1]
         new_point = []

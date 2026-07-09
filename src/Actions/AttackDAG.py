@@ -33,7 +33,7 @@ class attackDAG():
         for ii in range(len(self.DAGNodeArray)):
             print("Action Index: " + str(ii) + "  " + str(self.DAGNodeArray[ii]) + ", ")
 
-    def getParaIndexFromActionIndex(self, actionIndex):
+    def paramIndexForAction(self, actionIndex):
         return self.DAGNodeArray[actionIndex].paraList
 
     def composeIndexMappings(self, indexMappings):

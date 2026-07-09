@@ -134,7 +134,7 @@ class synthesizer():
         self.CounterExampleLoop = CounterExampleLoop 
 
         self.refreshTransitFormula()
-        self.showDataPointsStats()
+        self.printDataPointCounts()
 
         global_best_profit = 0
         
@@ -156,7 +156,7 @@ class synthesizer():
         #     print(" ================================================================================= ")
         #     print(" ================================================================================= ")
         self.clearCache()
-        self.showDataPointsStats()
+        self.printDataPointCounts()
         if actual_best_profit > global_best_profit:
             global_best_profit = actual_best_profit
         
@@ -177,7 +177,7 @@ class synthesizer():
                 print(" ================================================================================= ")
                 print(" ================================================================================= ")
             self.clearCache()
-            self.showDataPointsStats()
+            self.printDataPointCounts()
             if actual_best_profit > global_best_profit:
                 global_best_profit = actual_best_profit
             if self.priorityworklist.isEmpty():
@@ -194,7 +194,7 @@ class synthesizer():
         print(" ======================= End of Answers    ===================================== ")
         print(" =================== Best Profit ", global_best_profit, " ============================ ")
         
-    def showDataPointsStats(self):
+    def printDataPointCounts(self):
         for action in self.actions:
             print(action.__name__, "number of points: ")
             op = getattr(action, "points", None)
@@ -418,14 +418,14 @@ class synthesizer():
             if currPartial.size() < maxLen:
                 expandList = currPartial.expandPartial() 
                 for p in expandList:
-                    if checkifFeasible2(self.actionWrapper, p.Actions, True): 
+                    if isFeasibleStrict(self.actionWrapper, p.Actions, True): 
                         # print("New Partial:     \t", end="")
                         # print(p.string())
                         self.worklist.append(p)
 
-            expandContract = currPartial.expandContract()
-            for c in expandContract:
-                if checkifFeasible2(self.actionWrapper, c.Actions, False): 
+            expandParams = currPartial.expandParams()
+            for c in expandParams:
+                if isFeasibleStrict(self.actionWrapper, c.Actions, False): 
                     alltraces.append(c)
                     allstrengths.append(strength)
 
@@ -571,6 +571,6 @@ class synthesizer():
                 
 if __name__ == '__main__':
     # we need to test the length of worklist 
-    # test checkifFeasible
+    # test isFeasible
 
     pass

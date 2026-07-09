@@ -112,9 +112,6 @@ def executeAndParseRelevantAddresses(command: str, overideFuncName=None):
     with open(path, 'w') as file:
         file.write(new_content)
 
-    # open the same file in write mode and write the modified content
-    with open(path, 'w') as file:
-        file.write(new_content)
 
     message = _run_forge(command)
     messages = message.split(SEPARATOR)

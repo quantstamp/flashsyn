@@ -10,9 +10,6 @@ from Actions.Utils import *
 
 class Partial(): 
     PossibleActions = []
-    def __init__(self):
-        self.Actions = []
-    
     def __init__(self, a):
         self.Actions = a + [Sketch()] 
 
@@ -24,7 +21,7 @@ class Partial():
         return len(self.Actions)
 
     def expand(self, isPartial): # True for expandPartial
-                                  # False for expandContract
+                                  # False for expandParams
         # TODO: Pruning 1: Token Flow Pruning
         # TODO: Pruning 2: Max Call Times
         expandlist = []
@@ -44,7 +41,7 @@ class Partial():
         return self.expand(True)
 
 
-    def expandContract(self):
+    def expandParams(self):
         return self.expand(False)
 
 
@@ -81,7 +78,7 @@ class Contract(Partial):
         datapoints = forge.executeCollectData()
         return datapoints
     
-    def multiEnumerate(self, actionWrapper, maxminRangeList):
+    def enumerateParamGrid(self, actionWrapper, maxminRangeList):
         currentStep = []
         # initial Pass
         para_append = []
@@ -148,7 +145,7 @@ class Contract(Partial):
     def optimizeEnumerate(self, actionWrapper, definedmaxminRange = None):
         # if we get a range from other means, use that range
         if definedmaxminRange:
-            return self.multiEnumerate(actionWrapper, definedmaxminRange)
+            return self.enumerateParamGrid(actionWrapper, definedmaxminRange)
         
         # otherwise, simply use the range given by actions' upper limit
         maxminRange = []
@@ -156,7 +153,7 @@ class Contract(Partial):
             if action.numInputs == 0:
                 continue
             maxminRange.append(action.range)
-        return self.multiEnumerate(actionWrapper, maxminRange)
+        return self.enumerateParamGrid(actionWrapper, maxminRange)
 
 
     

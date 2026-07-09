@@ -2,12 +2,9 @@
 pragma solidity >0.4.21;
 
 import {DSTest} from "ds-test/test.sol";
-import {Utilities} from "./utils/Utilities.sol";
-import {console} from "./utils/Console.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
-import "ds-test/test.sol";
 
 
 //TODO: 1. Define all needed interfaces & structs below. Reference the example foundry script as needed throughout.
@@ -38,8 +35,8 @@ contract Protocol is DSTest, stdCheats {
     }
 
     // TODO 4. Define this profitSummary function to append & print out the balance of the tokens in consideration for profits.
-    function profitSummary() public pure returns (string memory) {
-        //EXAMPLE: string memory profitSummaryString = Strings.append("FlashSyn", "".balanceOf(address(attacker)) / 1e6);
+    function profitSummary() public view returns (string memory) {
+        //EXAMPLE: string memory profitSummaryString = Strings.append("FlashSyn: ", "".balanceOf(address(attacker)) / 1e6);
         string memory profitSummaryString = "";
         return profitSummaryString;
     }

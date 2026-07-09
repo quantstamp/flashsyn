@@ -3,14 +3,6 @@ class Action():
     def string(cls):
         return cls.__name__
 
-    @classmethod
-    def __str__(cls):
-        return cls.__name__
-    
-    def __str__(self):
-        return  self.__name__
-    
-
     def __str__(self):
         return self.__name__
 

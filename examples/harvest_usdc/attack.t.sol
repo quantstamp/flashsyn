@@ -7,12 +7,9 @@ pragma solidity >0.4.21;
 // and redeems the shares for more USDT than it put in.
 
 import {DSTest} from "ds-test/test.sol";
-import {Utilities} from "./utils/Utilities.sol";
-import {console} from "./utils/Console.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
-import "ds-test/test.sol";
 
 
 interface IUSDC {
@@ -84,7 +81,7 @@ contract Harvest_USDC is DSTest, stdCheats {
     // Profit is measured over both tokens; the parser reads the two integers after "FlashSyn".
     function profitSummary() public view returns (string memory) {
         return Strings.append(
-            "FlashSyn ",
+            "FlashSyn: ",
             Strings.appendWithSpace(USDT.balanceOf(address(attacker)) / 1e6, USDC.balanceOf(address(attacker)) / 1e6)
         );
     }

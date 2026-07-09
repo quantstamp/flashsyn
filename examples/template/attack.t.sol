@@ -10,12 +10,9 @@ pragma solidity >0.4.21;
 // your protocol's, keeping the token variable names in sync with manifest tokenInfo.
 
 import {DSTest} from "ds-test/test.sol";
-import {Utilities} from "./utils/Utilities.sol";
-import {console} from "./utils/Console.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
-import "ds-test/test.sol";
 
 
 // TODO 1. Declare an interface per contract your actions call. Only the functions
@@ -84,7 +81,7 @@ contract Template is DSTest, stdCheats {
     // The string must contain "FlashSyn"; the integers after it are parsed as balances.
     function profitSummary() public view returns (string memory) {
         return Strings.append(
-            "FlashSyn ",
+            "FlashSyn: ",
             Strings.appendWithSpace(TOKENA.balanceOf(address(attacker)) / 1e6,
                                     TOKENB.balanceOf(address(attacker)) / 1e6)
         );

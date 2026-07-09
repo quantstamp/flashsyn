@@ -477,9 +477,7 @@ class eulerTouch(eulerAction):
 
 def main():
     # Do not change. 
-    config.ExecutionMode = DVD  # DVD for normal cases. 
-                                # The only exception is some functions requires to be called by a contract instead of an EOA
-                                # In this case, contact Jeff to set up a custimized execution mode. 
+    config.ExecutionMode = DVD  # DVD for normal cases.
 
     config.command = "./run.sh euler ETH 16818064"  # the command used by the foundry to run the contract
     config.benchmarkName = "euler"  # the name of the benchmark, simply for distinguishing between different benchmarks

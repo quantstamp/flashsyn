@@ -128,7 +128,7 @@ class NumericalApproximatorsPro():
             sum += len(self.dataMap[key][0])
         return sum
 
-    def add1PointValue(self, point, values, actionList):
+    def addDataPoint(self, point, values, actionList):
         # new_point = Adapter().extend(point, actionList)
         dag = None
         index = None

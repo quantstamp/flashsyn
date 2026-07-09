@@ -133,12 +133,8 @@ library Strings {
 
 
     function toString(address account) public pure returns(string memory) {
-    return toString(abi.encodePacked(account));
+        return toString(abi.encodePacked(account));
     }
-
-    // function toString(uint256 value) public pure returns(string memory) {
-    //     return toString(abi.encodePacked(value));
-    // }
 
     function toString(bytes32 value) public pure returns(string memory) {
         return toString(abi.encodePacked(value));
@@ -156,8 +152,4 @@ library Strings {
         }
         return string(str);
     }
-
-
-
-
 }

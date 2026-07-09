@@ -5,7 +5,7 @@ from Actions.AttackDAG import *
 
 
 # this function is only for initial data collection 
-def checkifFeasible(ActionWrapper, ActionList, isPartial=True):
+def isFeasible(ActionWrapper, ActionList, isPartial=True):
     # Pruning 0: each action can only be used at most maxTime
     ActionMap = {}
 
@@ -69,7 +69,7 @@ def checkifFeasible(ActionWrapper, ActionList, isPartial=True):
 # + each action can only be used twice
 # + no useless tokens(if a token is not in TragetTokens, there must be a path to one of target token)
 # + need at least one parameter in total for non-Partial
-def checkifFeasible2(ActionWrapper, ActionList, isPartial):
+def isFeasibleStrict(ActionWrapper, ActionList, isPartial):
     # Pruning 0: each action can only be used at most maxTime
     ActionMap = {}
 

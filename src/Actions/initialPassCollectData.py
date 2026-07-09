@@ -62,7 +62,7 @@ def AddDataPoints(datapoints, action_list):
     datapoints = removeDuplicates(datapoints)
     for datapoint in datapoints:
         if datapoint[1] != None and len(datapoint[1]) > 1:
-            ret = action_list[-1].add1PointValue(datapoint[0], datapoint[1])
+            ret = action_list[-1].addDataPoint(datapoint[0], datapoint[1])
             if ret == 1:
                 count += 1
             elif ret == -1:
@@ -70,7 +70,7 @@ def AddDataPoints(datapoints, action_list):
             elif ret == -2:
                 exists_count += 1
         elif datapoint[1] != None and len(datapoint[1]) == 1 and datapoint[1][0] != 0:
-            ret = action_list[-1].add1PointValue(
+            ret = action_list[-1].addDataPoint(
                 datapoint[0], datapoint[1])
             if ret == 1:
                 count += 1
@@ -111,7 +111,7 @@ def combinationActions(ActionWrapper, ActionList, ActionToCollect, maxLen = 4):
     # print(actionlistPermutations)
     out = []
     # check if single action is feasible
-    if checkifFeasible(ActionWrapper, [ActionToCollect], False):
+    if isFeasible(ActionWrapper, [ActionToCollect], False):
         out.append((ActionToCollect, ))
     for actionlistPermutation in actionlistPermutations:
         for i in range(1, len(actionlistPermutation) + 1):
@@ -147,7 +147,7 @@ def initialPassCollectData(action_lists, ActionWrapper, TargetDataPoints = 1000)
         # filter out infeasible ones
         new_cAs = []
         for cA in cAs:
-            if checkifFeasible(ActionWrapper, cA, False):
+            if isFeasible(ActionWrapper, cA, False):
                 new_cAs.append(cA)
         print(action_list[-1].__name__, "to collect")
         print("num of traces: ", len(new_cAs))
@@ -194,7 +194,7 @@ def initialPassCollectData(action_lists, ActionWrapper, TargetDataPoints = 1000)
                     datapoints = removeDuplicates(datapoints)
                     for datapoint in datapoints:
                         if datapoint[1] != None and len(datapoint[1]) > 1:
-                            ret = action_list[-1].add1PointValue(
+                            ret = action_list[-1].addDataPoint(
                                 datapoint[0], datapoint[1])
                             if ret == 1:
                                 count += 1
@@ -203,7 +203,7 @@ def initialPassCollectData(action_lists, ActionWrapper, TargetDataPoints = 1000)
                             elif ret == -2:
                                 exists_count += 1
                         elif datapoint[1] != None and len(datapoint[1]) == 1 and datapoint[1][0] != 0:
-                            ret = action_list[-1].add1PointValue(
+                            ret = action_list[-1].addDataPoint(
                                 datapoint[0], datapoint[1])
                             if ret == 1:
                                 count += 1
@@ -237,7 +237,7 @@ def initialPassCollectData2(action_lists, ActionWrapper, TargetDataPoints = 1000
         cAs = combinationActions(ActionWrapper, action_list[:-1], action_list[-1])
         totalCount = len(cAs)
         for cA in cAs:
-            if not checkifFeasible(ActionWrapper, cA, False):
+            if not isFeasible(ActionWrapper, cA, False):
                 totalCount -= 1
         print(action_list[-1].__name__, "to collect")
         print("num of traces: ", totalCount)
@@ -249,7 +249,7 @@ def initialPassCollectData2(action_lists, ActionWrapper, TargetDataPoints = 1000
         totalCount = 0
         for totalPoints in [TargetDataPoints / 5 * 2]:
             for cA in cAs:
-                if not checkifFeasible(ActionWrapper, cA, False):
+                if not isFeasible(ActionWrapper, cA, False):
                     continue
                 print(cA)
                 if len(cA) == 6 and cA[0].string() == "SwapPancakeWBNB2LP" \
@@ -311,7 +311,7 @@ def initialPassCollectData2(action_lists, ActionWrapper, TargetDataPoints = 1000
 
                 for datapoint in datapoints:
                     if datapoint[1] != None and len(datapoint[1]) > 1:
-                        ret = action_list[-1].add1PointValue(
+                        ret = action_list[-1].addDataPoint(
                             datapoint[0], datapoint[1])
                         if ret == 1:
                             count += 1
@@ -320,7 +320,7 @@ def initialPassCollectData2(action_lists, ActionWrapper, TargetDataPoints = 1000
                         elif ret == -2:
                             exists_count += 1
                     elif datapoint[1] != None and len(datapoint[1]) == 1 and datapoint[1][0] != 0:
-                        ret = action_list[-1].add1PointValue(
+                        ret = action_list[-1].addDataPoint(
                             datapoint[0], datapoint[1])
                         if ret == 1:
                             count += 1
@@ -429,7 +429,7 @@ def initialPassCollectData3(action_lists, ActionWrapper, TargetDataPoints = 1000
         # filter out infeasible ones
         new_cAs = []
         for cA in cAs:
-            if checkifFeasible(ActionWrapper, cA, False):
+            if isFeasible(ActionWrapper, cA, False):
                 new_cAs.append(cA)
         print(action_list[-1].__name__, "to collect")
         print("num of traces: ", len(new_cAs))
@@ -487,7 +487,7 @@ def initialPassCollectData3(action_lists, ActionWrapper, TargetDataPoints = 1000
                         sys.exit("action_list[-1].__name__ != cA[-1].__name__")
                     for datapoint in datapoints:
                         if datapoint[1] != None and len(datapoint[1]) > 1:
-                            ret = action_list[-1].add1PointValue(datapoint[0], datapoint[1], cA)
+                            ret = action_list[-1].addDataPoint(datapoint[0], datapoint[1], cA)
                             if ret == 1:
                                 count += 1
                             elif ret == -1:
@@ -495,7 +495,7 @@ def initialPassCollectData3(action_lists, ActionWrapper, TargetDataPoints = 1000
                             elif ret == -2:
                                 exists_count += 1
                         elif datapoint[1] != None and len(datapoint[1]) == 1 and datapoint[1][0] != 0:
-                            ret = action_list[-1].add1PointValue(datapoint[0], datapoint[1], cA)
+                            ret = action_list[-1].addDataPoint(datapoint[0], datapoint[1], cA)
                             if ret == 1:
                                 count += 1
                             elif ret == -1:
@@ -622,7 +622,7 @@ def initialPassCollectData4(actionSpecs, ActionWrapper, TargetDataPoints = 1000,
         # filter out infeasible ones
         new_cAs = []
         for cA in cAs:
-            if checkifFeasible(ActionWrapper, cA, False):
+            if isFeasible(ActionWrapper, cA, False):
                 new_cAs.append(cA)
         
         
@@ -692,7 +692,7 @@ def initialPassCollectData4(actionSpecs, ActionWrapper, TargetDataPoints = 1000,
                     sys.exit("action_list[-1].__name__ != cA[-1].__name__")
                 for datapoint in datapoints:
                     if datapoint[1] != None and len(datapoint[1]) > 1:
-                        ret = action_list[-1].add1PointValue(datapoint[0], datapoint[1], cA)
+                        ret = action_list[-1].addDataPoint(datapoint[0], datapoint[1], cA)
                         if ret == 1:
                             count += 1
                         elif ret == -1:
@@ -700,7 +700,7 @@ def initialPassCollectData4(actionSpecs, ActionWrapper, TargetDataPoints = 1000,
                         elif ret == -2:
                             exists_count += 1
                     elif datapoint[1] != None and len(datapoint[1]) == 1 and datapoint[1][0] != 0:
-                        ret = action_list[-1].add1PointValue(datapoint[0], datapoint[1], cA)
+                        ret = action_list[-1].addDataPoint(datapoint[0], datapoint[1], cA)
                         if ret == 1:
                             count += 1
                         elif ret == -1:
