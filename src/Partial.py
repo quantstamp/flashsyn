@@ -68,7 +68,7 @@ class Contract(Partial):
         para_product = list(itertools.product(*para_append))
         attackContract = actionWrapper.buildAttackContract(self.Actions)
 
-        forge = forgedataCollectContract(attackContractName, config.initialEther, config.blockNum)
+        forge = ForgeDataCollector(attackContractName, config.initialEther, config.blockNum)
         forge.updateAttackContract(attackContract)
 
         for pp in para_product:

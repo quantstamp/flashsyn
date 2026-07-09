@@ -144,7 +144,7 @@ def flashsyn_setup():
     actions = [SwapUniswapDVT2ETH, SwapUniswapETH2DVT, PoolBorrow]
     # Safe default: any action's prestate may be reached by running all the others.
     dependencies = [[b for b in actions if b is not a] + [a] for a in actions]
-    attackDAGGenerator.setActionDependency(generateActionDependency(actions, dependencies))
+    AttackDAGGenerator.setActionDependency(generateActionDependency(actions, dependencies))
 
     return {"wrapper": puppetAction, "actions": actions,
             "dependencies": dependencies, "max_len": 3}

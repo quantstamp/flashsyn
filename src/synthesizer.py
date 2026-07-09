@@ -62,7 +62,7 @@ class PriorityQueue(object):
     def clear(self):
         self.queue.clear()
 
-class synthesizer():
+class Synthesizer():
 
     def __init__(self, actions, actionWrapper, processNum):
         self.actions = actions
@@ -92,13 +92,17 @@ class synthesizer():
         Partial.setPossibleActions(actions)
 
 
+        # Shared result channels for the multi-process optimizer: worker processes
+        # (OptimizeMultiTrace / OptimizeMultiTrace2) append per-candidate results here
+        # under self.lock, and _synthesis / _synthesis2 drain them into
+        # concreteAttackVectorsCandidates afterwards. One list per parallel column.
         manager = multiprocessing.Manager()
-        self.list0 = manager.list()
-        self.list1 = manager.list()
-        self.list2 = manager.list()
-        self.list3 = manager.list()
-        self.list4 = manager.list()
-        self.list5 = manager.list()
+        self.mp_actions = manager.list()        # candidate action sequences
+        self.mp_params = manager.list()         # optimized parameter vectors (xls)
+        self.mp_profits = manager.list()        # estimated profits (funls)
+        self.mp_strengths = manager.list()      # approximation strength per candidate
+        self.mp_last_profits = manager.list()   # previous-round profit per candidate
+        self.mp_num_positives = manager.list()  # count of profitable samples
         self.lock = manager.Lock()
 
 
@@ -402,12 +406,12 @@ class synthesizer():
             arr4.append(0)
             arr5.append(NumPositives)
         self.lock.acquire()
-        self.list0 += arr0
-        self.list1 += arr1
-        self.list2 += arr2
-        self.list3 += arr3
-        self.list4 += arr4
-        self.list5 += arr5
+        self.mp_actions += arr0
+        self.mp_params += arr1
+        self.mp_profits += arr2
+        self.mp_strengths += arr3
+        self.mp_last_profits += arr4
+        self.mp_num_positives += arr5
         self.lock.release()
 
     def _synthesis(self, maxLen: int, strength = 0):
@@ -459,18 +463,18 @@ class synthesizer():
             for process in all_processes:
                 process.join()
 
-            self.concreteAttackVectorsCandidates[0] = list(self.list0).copy()
-            self.concreteAttackVectorsCandidates[1] = list(self.list1).copy()
-            self.concreteAttackVectorsCandidates[2] = list(self.list2).copy()
-            self.concreteAttackVectorsStrengths = list(self.list3).copy()
-            self.concreteAttackVectorsLastProfit = list(self.list4).copy()
-            self.concreteAttackNumOfPositives = list(self.list5).copy()
-            self.list0[:] = []
-            self.list1[:] = []
-            self.list2[:] = []
-            self.list3[:] = []
-            self.list4[:] = []
-            self.list5[:] = []
+            self.concreteAttackVectorsCandidates[0] = list(self.mp_actions).copy()
+            self.concreteAttackVectorsCandidates[1] = list(self.mp_params).copy()
+            self.concreteAttackVectorsCandidates[2] = list(self.mp_profits).copy()
+            self.concreteAttackVectorsStrengths = list(self.mp_strengths).copy()
+            self.concreteAttackVectorsLastProfit = list(self.mp_last_profits).copy()
+            self.concreteAttackNumOfPositives = list(self.mp_num_positives).copy()
+            self.mp_actions[:] = []
+            self.mp_params[:] = []
+            self.mp_profits[:] = []
+            self.mp_strengths[:] = []
+            self.mp_last_profits[:] = []
+            self.mp_num_positives[:] = []
 
             
     def OptimizeMultiTraceSingleProcess2(self, actions_arr, profit_arr, strength_arr):
@@ -493,7 +497,6 @@ class synthesizer():
         arr3 = []
         arr4 = []
         arr5 = []
-        global list0, list1, list2, list3, list4, list5
         for i in range(len(actions_arr)):
             actions = actions_arr[i]
             profit = profit_arr[i]
@@ -506,12 +509,12 @@ class synthesizer():
             arr4.append(profit)
             arr5.append(NumPositives)
         self.lock.acquire()
-        list0 += arr0
-        list1 += arr1
-        list2 += arr2
-        list3 += arr3
-        list4 += arr4
-        list5 += arr5
+        self.mp_actions += arr0
+        self.mp_params += arr1
+        self.mp_profits += arr2
+        self.mp_strengths += arr3
+        self.mp_last_profits += arr4
+        self.mp_num_positives += arr5
         self.lock.release()
 
 
@@ -558,13 +561,13 @@ class synthesizer():
             for process in all_processes:
                 process.join()
 
-            self.concreteAttackVectorsCandidates[0] = list(list0)
-            self.concreteAttackVectorsCandidates[1] = list(list1)
-            self.concreteAttackVectorsCandidates[2] = list(list2)
-            self.concreteAttackVectorsStrengths = list(list3)
-            self.concreteAttackVectorsLastProfit = list(list4)
-            self.concreteAttackNumOfPositives = list(list5)
-            list0[:], list1[:], list2[:], list3[:], list4[:], list5[:] = [], [], [], [], [], []
+            self.concreteAttackVectorsCandidates[0] = list(self.mp_actions)
+            self.concreteAttackVectorsCandidates[1] = list(self.mp_params)
+            self.concreteAttackVectorsCandidates[2] = list(self.mp_profits)
+            self.concreteAttackVectorsStrengths = list(self.mp_strengths)
+            self.concreteAttackVectorsLastProfit = list(self.mp_last_profits)
+            self.concreteAttackNumOfPositives = list(self.mp_num_positives)
+            self.mp_actions[:], self.mp_params[:], self.mp_profits[:], self.mp_strengths[:], self.mp_last_profits[:], self.mp_num_positives[:] = [], [], [], [], [], []
 
 
 

@@ -15,7 +15,7 @@ from Actions.prune import *
 
 
 
-class attackDAG():
+class AttackDAG():
     def __init__(self):
         self.roots = []
         self.DAGNodeArray = []
@@ -279,7 +279,7 @@ class attackDAG():
         
 
 
-class attackDAGNode():
+class AttackDAGNode():
     def __init__(self, action, index, paraList) -> None:
         self.action = action # val is a tuple (action, actionIndex, parameterIndex)
         self.index = index
@@ -310,7 +310,7 @@ class attackDAGNode():
 
 
 
-class attackDAGGenerator():
+class AttackDAGGenerator():
     @classmethod
     def setActionDependency(cls, actionDependency):
         cls.actionDependency = actionDependency
@@ -333,20 +333,20 @@ class attackDAGGenerator():
 
         DAGNodeArray = []
         paraIndex = 0
-        dag = attackDAG()
+        dag = AttackDAG()
         for ii in range(len(actionVector)):
             action = actionVector[ii]
             numInputs = action.numInputs
             DAGNode = None
             if numInputs == 0:
                 # no input, add the action node
-                DAGNode = attackDAGNode(action, ii, [])
+                DAGNode = AttackDAGNode(action, ii, [])
             else:
                 paraList = []
                 for jj in range(numInputs):
                     paraList.append( paraIndex + jj )
                 paraIndex += numInputs
-                DAGNode = attackDAGNode(action, ii, paraList)
+                DAGNode = AttackDAGNode(action, ii, paraList)
             DAGNodeArray.append(DAGNode)
             # add the dependency
             dependencyList = cls.actionDependency[action.__name__]
@@ -508,17 +508,17 @@ if __name__ == "__main__":
     actionVector2 = [SwapUniswapWETH2DAI, LP2BorrowLimit, MintLPUniswapV2]
     actionVector3 = [SwapUniswapWETH2DAI, LP2BorrowLimit, MintLPUniswapV2]
 
-    attackDAGGenerator.setActionDependency(actionDependency)
-    dag1, index = attackDAGGenerator.generateDAG(actionVector)
+    AttackDAGGenerator.setActionDependency(actionDependency)
+    dag1, index = AttackDAGGenerator.generateDAG(actionVector)
     print("DAG1: ", "index: ", index)
     dag1.printDAG()
-    dag2, index2 = attackDAGGenerator.generateDAG(actionVector2)
+    dag2, index2 = AttackDAGGenerator.generateDAG(actionVector2)
     print("\nDAG2: ", "index: ", index2)
     dag2.printDAG()
     possibleMappings = dag2.isSubDAGOf(dag1)
     # print("possibleMappings: ", possibleMappings)
 
-    dag3, index3 = attackDAGGenerator.generateDAG(actionVector3)
+    dag3, index3 = AttackDAGGenerator.generateDAG(actionVector3)
     print("\nDAG3: ", "index: ", index3)
     dag3.printDAG()
 
@@ -558,10 +558,10 @@ if __name__ == "__main__":
     print("Extended input", dag2.extendInputs(dag3Input))
                                                             # None
     actionVector4 = [SwapUniswapWETH2DAI, MintLPUniswapV2, LP2BorrowLimit, BorrowSCUSDC, SwapUniswapDAI2WETH, BorrowSCDAI]
-    dag4, index4 = attackDAGGenerator.generateDAG(actionVector4)
+    dag4, index4 = AttackDAGGenerator.generateDAG(actionVector4)
                                                                                 # None
     actionVector5 = [MintLPUniswapV2, SwapUniswapDAI2WETH, SwapUniswapWETH2DAI, LP2BorrowLimit, BorrowSCUSDC, BorrowSCDAI]
-    dag5, index5 = attackDAGGenerator.generateDAG(actionVector5)
+    dag5, index5 = AttackDAGGenerator.generateDAG(actionVector5)
 
     dag4.isSubDAGOf(dag5)
 

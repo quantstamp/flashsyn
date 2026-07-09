@@ -26,7 +26,7 @@ def _load_settings():
     return _settings
 
 
-class forgedataCollectContract:
+class ForgeDataCollector:
     def __init__(self, attackContractName: str, initialEther: int, blockNum: int):
 
         self.ExecutionMode = config.ExecutionMode  # 0 for ETH  1 for BSC

@@ -24,7 +24,7 @@ def _preamble_for(ActionWrapper):
 
     Prefer an explicit start_str literal if the action model provides one (Euler
     still does). Otherwise read it from the authored attack.t.sol so the preamble
-    lives in exactly one place. The first forgedataCollectContractDVD is always
+    lives in exactly one place. The first ForgeDataCollectorDVD is always
     built before the harness is first overwritten, and extract_preamble slices the
     same preamble out of a generated file too, so this is safe to read at any point.
     """
@@ -45,7 +45,7 @@ def _preamble_for(ActionWrapper):
     return preamble
 
 
-class forgedataCollectContractDVD:
+class ForgeDataCollectorDVD:
     def __init__(self, ActionWrapper):
 
         self.ExecutionMode = DVD  # 0 for ETH  1 for BSC  2 for DVD
@@ -136,9 +136,11 @@ class forgedataCollectContractDVD:
 
         for para in paraList:
             temp += str(para) + ", "
-        temp = temp[:-2] + ");"
+        if paraList:            # zero-param actions (numInputs=0) leave nothing to trim;
+            temp = temp[:-2]    # trimming "_(" would emit a malformed "helperN);"
+        temp += ");"
         temp += '''
-    }   
+    }
         '''
         self.collectorContract += temp
         self.dataCollectorCount += 1

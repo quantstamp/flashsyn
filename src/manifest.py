@@ -32,7 +32,7 @@ import tomllib
 import config
 from Actions.macros import DVD
 from Actions.UtilsPrecision import NumericalApproximatorsPro
-from Actions.AttackDAG import attackDAGGenerator, generateActionDependency
+from Actions.AttackDAG import AttackDAGGenerator, generateActionDependency
 from FlashSynProActions.ActionPro import ActionPro
 
 
@@ -89,7 +89,7 @@ def load(manifest_path):
 
     # Safe default: every action's prestate may be reached by running all the others.
     dependencies = [[b for b in actions if b is not a] + [a] for a in actions]
-    attackDAGGenerator.setActionDependency(generateActionDependency(actions, dependencies))
+    AttackDAGGenerator.setActionDependency(generateActionDependency(actions, dependencies))
 
     return {"wrapper": wrapper, "actions": actions, "dependencies": dependencies,
             "max_len": m.get("max_synthesis_len", len(actions))}

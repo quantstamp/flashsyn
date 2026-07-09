@@ -91,15 +91,15 @@ class NumericalApproximatorsPro():
         for key in map:
             actionList = map[key][0]
             points, values = map[key][1]
-            dag, index = attackDAGGenerator.generateDAG(actionList)
-            if index == len(attackDAGGenerator.generated) - 1:
+            dag, index = AttackDAGGenerator.generateDAG(actionList)
+            if index == len(AttackDAGGenerator.generated) - 1:
                 # it means it's a new DAG
                 self.dataMap[index] = (points, values)
             else:
                 # if index == 16:
                 #     print("now is the time")
                 # it means it's equivalent to an old DAG
-                dag.setSimplifierExpander( attackDAGGenerator.generated[index] )
+                dag.setSimplifierExpander( AttackDAGGenerator.generated[index] )
                 new_points = []
                 for point in points:
                     new_point = dag.extendInputs(point)
@@ -115,11 +115,11 @@ class NumericalApproximatorsPro():
 
 
     def points(self, actionList):
-        dag, index = attackDAGGenerator.generateDAG(actionList)
+        dag, index = AttackDAGGenerator.generateDAG(actionList)
         return self.dataMap[index][0]
     
     def values(self, actionList):
-        dag, index = attackDAGGenerator.generateDAG(actionList)
+        dag, index = AttackDAGGenerator.generateDAG(actionList)
         return self.dataMap[index][1]
 
     def numOfDataPoints(self):
@@ -136,11 +136,11 @@ class NumericalApproximatorsPro():
             dag = self.cachedDAG
             index = self.cachedIndex
         else:
-            dag, index = attackDAGGenerator.generateDAG(actionList)
+            dag, index = AttackDAGGenerator.generateDAG(actionList)
             self.cachedActionList = actionList
             self.cachedDAG = dag
             self.cachedIndex = index
-            dag.setSimplifierExpander( attackDAGGenerator.generated[index] )
+            dag.setSimplifierExpander( AttackDAGGenerator.generated[index] )
 
         if index in self.dataMap:
             # it means that has old data points                
@@ -191,7 +191,7 @@ class NumericalApproximatorsPro():
             else:
                 if index not in self.inferredCache:
                     self.inferredCache[index] = []
-                    for key in attackDAGGenerator.subTree[index]:
+                    for key in AttackDAGGenerator.subTree[index]:
                         if key in self.dataMap:
                             self.inferredCache[index].append(key)
                 for related_indexes in self.inferredCache[index]:
@@ -219,8 +219,8 @@ class NumericalApproximatorsPro():
             for related_indexes in self.inferredCache[index]:
                 if related_indexes in self.dataMap:
                     points, values = self.dataMap[related_indexes]
-                    dag = attackDAGGenerator.generated[related_indexes]
-                    dag.setSimplifierExpander( attackDAGGenerator.generated[index] )
+                    dag = AttackDAGGenerator.generated[related_indexes]
+                    dag.setSimplifierExpander( AttackDAGGenerator.generated[index] )
                     for ii in range(len(points)):
                         point = points[ii]
                         new_points = dag.extendInputs(point)
@@ -243,13 +243,13 @@ class NumericalApproximatorsPro():
         #     actionList[1].__name__ == "MintLPUniswapV2" and actionList[2].__name__ == "SwapUniswapWETH2DAI":
         #     print("now is the time")
 
-        dag, index = attackDAGGenerator.generateDAG(actionList)
+        dag, index = AttackDAGGenerator.generateDAG(actionList)
 
         new_inputs = None
-        if index == len(attackDAGGenerator.generated)-1:
+        if index == len(AttackDAGGenerator.generated)-1:
             new_inputs = [inputs]
         else:
-            their_dag = attackDAGGenerator.generated[index]
+            their_dag = AttackDAGGenerator.generated[index]
             their_dag.setSimplifierExpander( dag )
             new_inputs = their_dag.extendInputs(inputs) 
 
@@ -273,15 +273,15 @@ class NumericalApproximatorsPro():
             newpoints = []
             newvalues = []
 
-            if len(attackDAGGenerator.subTree[index]) == 0:
-                sys.exit("Error: len(attackDAGGenerator.subTree[index]) == 0")
+            if len(AttackDAGGenerator.subTree[index]) == 0:
+                sys.exit("Error: len(AttackDAGGenerator.subTree[index]) == 0")
 
-            for key in attackDAGGenerator.subTree[index]:
+            for key in AttackDAGGenerator.subTree[index]:
                 # print(key)
                 if key in self.dataMap:
                     self.inferredCache[index].append(key)
 
-                    their_dag = attackDAGGenerator.generated[key]
+                    their_dag = AttackDAGGenerator.generated[key]
                     points, values = self.dataMap[key]
                     their_dag.setSimplifierExpander( dag )
 

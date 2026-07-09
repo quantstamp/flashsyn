@@ -206,7 +206,7 @@ def singleEnumerate(Actions, actionWrapper, para_append):
 
 def singleCollect(Actions, actionWrapper, para_product):
     attackContract = actionWrapper.buildAttackContract(Actions)
-    forge = forgedataCollectContractDVD(actionWrapper)
+    forge = ForgeDataCollectorDVD(actionWrapper)
     forge.addAttackContract(attackContract)
     forge.cleanDataCollector()
 
@@ -567,7 +567,7 @@ def executeAndAddDataPointsWithoutChecking(action_list, ActionWrapper, paras):
     for ii in range(len(action_list)):
         cAs.append(action_list[0: len(action_list) - ii])
 
-    forge = forgedataCollectContractDVD(ActionWrapper)
+    forge = ForgeDataCollectorDVD(ActionWrapper)
 
     data_map = {}
     # data_map: maps str(a sequence of actions) to the corresponding data points
@@ -636,9 +636,9 @@ def executeAndGetStats(action_lists, paras, ActionWrapper):
 
     forge = None
     if config.ExecutionMode == 2:
-        forge = forgedataCollectContractDVD(ActionWrapper)
+        forge = ForgeDataCollectorDVD(ActionWrapper)
     else:
-        forge = forgedataCollectContract(
+        forge = ForgeDataCollector(
             config.contract_name, config.initialEther, config.blockNum)
         forge.initializeAttackContract(ActionWrapper)
         
@@ -724,7 +724,7 @@ def executeAndAddDataPoints(action_list, ActionWrapper, paras, show=False):
     for ii in range(len(action_list)):
         cAs.append(action_list[0: len(action_list) - ii])
 
-    forge = forgedataCollectContractDVD(ActionWrapper)
+    forge = ForgeDataCollectorDVD(ActionWrapper)
 
     data_map = {}
     # data_map: maps str(a sequence of actions) to the corresponding data points
@@ -871,9 +871,9 @@ def testRealProfit_Batch(action_lists, para_lists, ActionWrapper):
     forgeBatch = None
 
     if config.ExecutionMode == 2:
-        forgeBatch = forgedataCollectContractDVD(ActionWrapper)
+        forgeBatch = ForgeDataCollectorDVD(ActionWrapper)
     else:
-        forgeBatch = forgedataCollectContract(
+        forgeBatch = ForgeDataCollector(
             config.contract_name, config.initialEther, config.blockNum)
         forgeBatch.initializeAttackContract(ActionWrapper)
 

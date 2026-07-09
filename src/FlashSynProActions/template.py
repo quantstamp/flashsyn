@@ -192,7 +192,7 @@ def main():
 
     actionDependency = generateActionDependency(action_list, actionDependencies) #DO NOT CHANGE
 
-    attackDAGGenerator.setActionDependency(actionDependency) # DO NOT CHANGE
+    AttackDAGGenerator.setActionDependency(actionDependency) # DO NOT CHANGE
 
     # ===========================================================================================================
     # =========================== Set up execution parameters ===================================================
@@ -217,7 +217,7 @@ def main():
     # config.benchmarkName = ""  # same benchmark name as set in 9b
     # config.processNum = 1
 
-    # Synthesizer = synthesizer(action_list, protocolAction, config.processNum)
+    # Synthesizer = Synthesizer(action_list, protocolAction, config.processNum)
     # Synthesizer.synthesis(maxSynthesisLen, Pruning, CounterExampleLoop, isFlashSynPro2)
 
 

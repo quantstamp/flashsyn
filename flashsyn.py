@@ -78,11 +78,11 @@ def main():
         w = setup["wrapper"]
         w.initialPass(setup["actions"], setup["dependencies"], w)
     elif cmd == "synthesize":
-        from synthesizer import synthesizer
+        from synthesizer import Synthesizer
         w = setup["wrapper"]
         w.runinitialPass()
         config.processNum = getattr(config, "processNum", 1) or 1
-        synthesizer(setup["actions"], w, config.processNum).synthesis(setup["max_len"], True, True)
+        Synthesizer(setup["actions"], w, config.processNum).synthesis(setup["max_len"], True, True)
 
 
 if __name__ == "__main__":

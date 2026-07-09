@@ -511,7 +511,7 @@ def main():
 
     actionDependency = generateActionDependency(action_list, actionDependencies)
 
-    attackDAGGenerator.setActionDependency(actionDependency)
+    AttackDAGGenerator.setActionDependency(actionDependency)
 
 
     # ===========================================================================================================

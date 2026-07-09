@@ -175,7 +175,7 @@ def initialPassCollectData(action_lists, ActionWrapper, TargetDataPoints = 1000)
                     attackContract = sample
                     print(ToString(cA))
                     
-                    forge = forgedataCollectContractDVD(ActionWrapper)
+                    forge = ForgeDataCollectorDVD(ActionWrapper)
                     forge.initializeAttackContract(attackContract)
 
                     bounds = collectBounds(cA)
@@ -262,7 +262,7 @@ def initialPassCollectData2(action_lists, ActionWrapper, TargetDataPoints = 1000
                 sample = ActionWrapper.buildCollectorContract(cA)
                 attackContract = sample
 
-                forge = forgedataCollectContractDVD(ActionWrapper)
+                forge = ForgeDataCollectorDVD(ActionWrapper)
                 forge.updateAttackContract(attackContract)
 
 
@@ -456,7 +456,7 @@ def initialPassCollectData3(action_lists, ActionWrapper, TargetDataPoints = 1000
                     attackContract = sample
                     print(ToString(cA))
 
-                    forge = forgedataCollectContractDVD(ActionWrapper)
+                    forge = ForgeDataCollectorDVD(ActionWrapper)
                     forge.initializeAttackContract(attackContract)
 
                     bounds = collectBounds(cA)
@@ -655,10 +655,10 @@ def initialPassCollectData4(actionSpecs, ActionWrapper, TargetDataPoints = 1000,
 
                 forge = None
                 if config.ExecutionMode == 2:
-                    forge = forgedataCollectContractDVD(ActionWrapper)
+                    forge = ForgeDataCollectorDVD(ActionWrapper)
                     forge.addAttackContract(attackContract)
                 else:
-                    forge = forgedataCollectContract(
+                    forge = ForgeDataCollector(
                         config.contract_name, config.initialEther, config.blockNum)  # need to be modified
                     forge.initializeAttackContract(ActionWrapper)
                     forge.addAttackContract(attackContract)

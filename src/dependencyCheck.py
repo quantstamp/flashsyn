@@ -28,7 +28,7 @@ project_path = os.path.dirname(dir_path)
 from conventions import SEPARATOR_TEXT
 
 
-class Action():
+class StorageAccess():
     def __init__(self, funcName):
         self.funcName = funcName
         self.relatedAddresses = []
@@ -136,7 +136,7 @@ def executeAndParseRelevantAddresses(command: str, overideFuncName=None):
             funcName = overideFuncName[countr]
             countr += 1
 
-        thisAction = Action(funcName)
+        thisAction = StorageAccess(funcName)
 
         # forge prints decoded addresses in EIP-55 checksummed (mixed-case) form,
         # whereas raw hex data (calldata / storage words) is lowercase. Requiring a

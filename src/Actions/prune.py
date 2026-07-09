@@ -197,7 +197,7 @@ def isFeasibleStrict(ActionWrapper, ActionList, isPartial):
     if not isPartial:
         for ii in range(0, len(ActionList)):
             lastAction = ActionList[ii]
-            dag, index = attackDAGGenerator.generateDAG(ActionList[0:ii+1] )
+            dag, index = AttackDAGGenerator.generateDAG(ActionList[0:ii+1] )
 
             if not hasattr(ActionList[ii], "approximators"):
                 continue
@@ -212,7 +212,7 @@ def isFeasibleStrict(ActionWrapper, ActionList, isPartial):
                     hasData = True
                     break
                 else:
-                    for subTreeIndex in attackDAGGenerator.subTree[index]:
+                    for subTreeIndex in AttackDAGGenerator.subTree[index]:
                         indexes2Try.append(subTreeIndex)
             
             if not hasData:
