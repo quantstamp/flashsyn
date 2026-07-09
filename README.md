@@ -71,9 +71,9 @@ Then follow the run procedure with `./run.sh euler ETH 16818064`. See
 ## Docker
 
 A `Dockerfile` pins the whole environment (Foundry + the 2021-era Python stack), which is the
-reliable way to run FlashSyn today. The image targets **`linux/amd64`** on purpose — the old pinned
-wheels exist for amd64 but not arm64 — so on Apple Silicon it runs under emulation (slower, but it
-builds).
+reliable way to run FlashSyn today. The image **builds natively on both `linux/amd64` and
+`linux/arm64`** — the pinned 2021-era wheels (numpy 1.21, scipy 1.7, scikit-learn 1.0.2, …) all ship
+cp39 wheels for both, so there is **no emulation** even on Apple Silicon.
 
 ```sh
 # fast path: prebuilt current Foundry
@@ -101,11 +101,13 @@ for the historical note below:
 > `foundryup -C <commit>` also no longer offers prebuilt-by-commit binaries. The exact 2023 forge
 > can't be reproduced today — which is why the parsers were modernised instead.
 
-**Verification status.** Run end-to-end against the Euler example on an arm64 host (amd64 emulation,
-mainnet archive fork at block 16818064, forge 1.7.1): compile → `dependencyCheck` → data collection
-(all actions) → synthesis all pass, and FlashSyn **rediscovers the exploit** — sequence
-`deposit → mint → donate → liquidateWithdraw`, ~$22.4M profit, with the polynomial estimate matching
-the on-chain execution to the dollar.
+**Verification status.** Run end-to-end against the Euler example on native arm64 with the modern
+stack (Python 3.12, numpy 2.2 / scipy 1.15 / scikit-learn 1.6, vendored shgo; mainnet archive fork
+at block 16818064, forge 1.7.1): compile → synthesis passes and FlashSyn **rediscovers the exploit** —
+sequence `deposit → mint → donate → liquidateWithdraw`, **Best Profit 22,415,805** with parameters
+`[100585937, 1501953125, 908203125]`, byte-identical to the frozen-stack (scipy 1.7.3) reference run.
+This equivalence is what pins the vendored shgo: with stock modern scipy shgo the same run yields
+`0 executions succeed` and never converges.
 
 > Note: run FlashSyn commands from the **repo root** — `settings.toml` is loaded via a path relative
 > to the working directory.
@@ -114,11 +116,19 @@ the on-chain execution to the dollar.
 
 - **Foundry** — any current forge works; parsers consume `--json` / `-vvvv` (tested on 1.7.1). The
   original 2023 pin is no longer required.
-- **Python** — `requirements.txt` targets the 3.7-era stack (numpy 1.21, scipy 1.7, …).
+- **Python** — 3.12 with a modern, pinned stack (numpy 2.2, scipy 1.15, scikit-learn 1.6, pandas 2.3,
+  web3 7); `requirements.txt` holds the top-level pins and `requirements.lock` the full transitive lock.
+- **Optimizer (shgo)** — scipy rewrote `shgo`'s sampling/simplicial internals after 1.7.x, which changes
+  the optima it returns in ≥4 dimensions and stops FlashSyn's candidates from validating on-chain. So
+  `src/vendored_shgo/` carries a self-contained copy of scipy 1.7.3's shgo, and the engine imports that
+  instead of `scipy.optimize.shgo`. This keeps results reproducible on the modern stack (verified: the
+  Euler example rediscovers the exact ~$22.4M exploit, identical to the frozen-stack reference). Do not
+  swap it back to the stock scipy shgo without re-verifying the Euler result.
 - **RPC** — `settings.toml` / `run.sh` carry shared, rented archive-node endpoints that may be closed;
   supply your own.
-- **Runtime** — a full Euler synthesis is ~10–12 min under amd64 emulation (Apple Silicon); native
-  amd64 is faster. Early synthesis rounds print `0 executions succeed` / `Best Profit 0.2` — that is
+- **Runtime** — a full Euler synthesis was ~10–12 min under the old amd64-emulation image (Apple
+  Silicon); the native arm64 image should be faster. Early synthesis rounds print `0 executions
+  succeed` / `Best Profit 0.2` — that is
   the pre-refinement Strength-0 phase, **not** a failure; let the counter-example loop run to the end.
 
 ## Provenance

@@ -8,7 +8,7 @@ import logging
 import warnings
 from scipy import spatial
 from scipy.optimize import OptimizeResult, minimize
-from scipy.optimize._shgo_lib.triangulation import Complex
+from .triangulation import Complex
 
 
 __all__ = ['shgo']

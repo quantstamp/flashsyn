@@ -2,9 +2,12 @@
 #
 # FlashSyn reusable template — reproducible environment.
 #
-# Pinned to linux/amd64 on purpose: the 2021-era Python deps (numpy 1.21, scipy 1.7,
-# scikit-learn 1.0.2, pykdtree) ship prebuilt wheels for amd64 but rarely for arm64.
-# On Apple Silicon this image runs under emulation (slower, but it builds and works).
+# Builds natively on the host architecture (arm64 and amd64). Python 3.12 with a
+# modern, pinned stack (numpy 2.2, scipy 1.15, scikit-learn 1.6, pandas 2.3, web3 7);
+# all ship prebuilt cp312 wheels for both linux/amd64 and linux/arm64, so no emulation
+# is needed — including on Apple Silicon. (The image was previously pinned to
+# linux/amd64 only because of pykdtree, a dependency that was never actually imported;
+# it has been dropped.)
 #
 # Foundry install mode is selectable:
 #   FOUNDRY_INSTALL=latest         (default) prebuilt current forge via foundryup — fast, always builds.
@@ -20,7 +23,7 @@ ARG RUST_VERSION=1.72.0
 
 # ---------- Foundry: prebuilt latest ----------
 # bookworm (glibc 2.36): current forge binaries require glibc >= ~2.34, so bullseye (2.31) fails.
-FROM --platform=linux/amd64 debian:bookworm-slim AS foundry-latest
+FROM debian:bookworm-slim AS foundry-latest
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl git ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV PATH="/root/.foundry/bin:${PATH}"
@@ -35,7 +38,7 @@ RUN mkdir -p /out && cp /root/.foundry/bin/forge /out/ \
 # solc versions released after 2023 (E0428: SOLC_VERSION_0_8_35 defined twice). foundryup
 # also no longer offers prebuilt-by-commit binaries. Getting the exact 2023 forge is not
 # practical today; the real path is modernizing FlashSyn's forge-output parsers (forge --json).
-FROM --platform=linux/amd64 rust:${RUST_VERSION}-slim-bookworm AS foundry-pinned-source
+FROM rust:${RUST_VERSION}-slim-bookworm AS foundry-pinned-source
 ARG FOUNDRY_COMMIT
 RUN apt-get update && apt-get install -y --no-install-recommends \
       git libssl-dev pkg-config ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -50,7 +53,7 @@ RUN mkdir -p /out && cp /src/target/release/forge /out/ \
 FROM foundry-${FOUNDRY_INSTALL} AS foundry
 
 # ---------- Python deps (isolated so it can be built/verified alone) ----------
-FROM --platform=linux/amd64 python:3.9-slim-bookworm AS deps
+FROM python:3.12-slim-bookworm AS deps
 ENV DEBIAN_FRONTEND=noninteractive
 # build-essential + gfortran + libgomp1 cover any dep that falls back to a source build (pykdtree/scipy).
 RUN apt-get update && apt-get install -y --no-install-recommends \

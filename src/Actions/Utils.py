@@ -2,11 +2,11 @@ from scipy.interpolate.interpnd import NDInterpolatorBase
 from numpy import array, array_equal, allclose
 import numpy as np
 import signal
-from scipy.spatial.qhull import QhullError
+from scipy.spatial import QhullError
 from scipy.interpolate import LinearNDInterpolator
 from scipy.interpolate import NearestNDInterpolator
 from scipy.interpolate import interp1d
-from scipy.optimize import shgo
+from vendored_shgo import shgo   # frozen scipy-1.7.3 shgo; see src/vendored_shgo/__init__.py
 
 import time, itertools, os, sys, inspect, gc, random
 
