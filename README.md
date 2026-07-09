@@ -24,6 +24,8 @@ src/
     lib/                                       # ds-test, forge-std, mylib, openzeppelin
 examples/
   euler/                                       # worked example (opt-in, not on the default path)
+  harvest_usdt/                                # worked example — Harvest Finance fUSDC leg (2020)
+  harvest_usdc/                                # worked example — Harvest Finance fUSDT leg (2020)
 ```
 
 ## What you author
@@ -67,6 +69,13 @@ cp examples/euler/attack.t.sol    src/foundryModule/src/test/attack.t.sol
 
 Then follow the run procedure with `./run.sh euler ETH 16818064`. See
 [`examples/euler/README.md`](examples/euler/README.md).
+
+Two more worked examples ship the same way: the **Harvest Finance** exploits of
+Oct 2020 — the fUSDC leg ([`examples/harvest_usdt/`](examples/harvest_usdt/README.md),
+block 11129474) and the fUSDT leg ([`examples/harvest_usdc/`](examples/harvest_usdc/README.md),
+block 11129500). Both are Curve-price-manipulation → vault-mispricing attacks with
+four actions each. Copy their two files into place and run with
+`./run.sh Harvest_USDT ETH 11129474` / `./run.sh Harvest_USDC ETH 11129500`.
 
 ## Docker
 
