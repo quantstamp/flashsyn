@@ -24,7 +24,14 @@ def ToString(action_list):
 
 
 
-class ActionPro():    
+class ActionPro():
+    # The Solidity preamble (interfaces + contract + setUp + profitSummary) the
+    # generated collectors are appended to. Leave it as this default '' and the
+    # engine reads the preamble straight from the authored attack.t.sol instead
+    # (see forge/forgeCollectDVD.py) — one source of truth, no duplication. Only
+    # set it to a literal to override that (the Euler example still does).
+    start_str = ''
+
     @classmethod
     def string(cls):
         return cls.__name__

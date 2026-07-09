@@ -26,89 +26,9 @@ class HarvestUSDTAction(ActionPro):
 
     TargetTokens = TokenPrices.keys()    # Don't change: tokens of interest
 
-    # Preamble of the foundry script, identical to examples/harvest_usdt/attack.t.sol
-    # up to (but not including) the first collector/helper function.
-    start_str = '''// SPDX-License-Identifier: MIT
-pragma solidity >0.4.21;
-
-// Harvest Finance exploit (fUSDC vault), 26 Oct 2020, block 11129474
-// tx: 0x35f8d2f572fceaac9288e5d462117850ef2694786992a8c3f6d02612277b0877
-
-import {DSTest} from "ds-test/test.sol";
-import {Utilities} from "./utils/Utilities.sol";
-import {console} from "./utils/Console.sol";
-import {Vm} from "forge-std/Vm.sol";
-import {stdCheats} from "forge-std/stdlib.sol";
-import {Strings} from "mylib/StringCon.sol";
-import "ds-test/test.sol";
-
-
-interface IUSDC {
-    function approve(address spender, uint256 value) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-    function configureMinter(address minter, uint256 minterAllowedAmount) external returns (bool);
-    function masterMinter() external view returns (address);
-    function mint(address _to, uint256 _amount) external returns (bool);
-    function transfer(address to, uint256 value) external returns (bool);
-}
-
-interface IUSDT {
-    function approve(address spender, uint256 value) external;
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address to, uint256 value) external;
-}
-
-interface ICurve {
-    function exchange_underlying(int128 i, int128 j, uint256 dx, uint256 min_dy) external;
-    function balances(uint256 i) external view returns (uint256);
-}
-
-interface IfUSDC {
-    function deposit(uint256 amount) external;
-    function withdraw(uint256 numberOfShares) external;
-    function balanceOf(address account) external view returns (uint256);
-}
-
-contract Harvest_USDT is DSTest, stdCheats {
-    Vm internal constant vm = Vm(HEVM_ADDRESS);
-    address payable constant attacker = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker"))))));
-    IUSDC internal constant USDC = IUSDC(address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48));
-    IUSDT internal constant USDT = IUSDT(address(0xdAC17F958D2ee523a2206206994597C13D831ec7));
-    ICurve internal constant CURVE = ICurve(address(0x45F783CCE6B7FF23B2ab2D70e416cdb7D6055f51));
-    IfUSDC internal constant fUSDC = IfUSDC(address(0xf0358e8c3CD5Fa238a29301d0bEa3D63A17bEdBE));
-
-    uint256 constant USDC_CAPITAL = 50000000e6;
-    uint256 constant USDT_CAPITAL = 18308555417594;
-
-    function setUp() public {
-        vm.label(attacker, "Attacker");
-
-        address minter = address(0x9BEF5148fD530244a14830f4984f2B76BCa0dC58);
-        address MasterMinter = USDC.masterMinter();
-        vm.startPrank(MasterMinter);
-        USDC.configureMinter(minter, 2 ** 256 - 1);
-        vm.stopPrank();
-        vm.startPrank(minter);
-        USDC.mint(attacker, USDC_CAPITAL);
-        vm.stopPrank();
-
-        vm.store(address(USDT), keccak256(abi.encode(attacker, uint256(2))), bytes32(USDT_CAPITAL));
-        require(USDT.balanceOf(attacker) == USDT_CAPITAL, "USDT funding failed");
-        require(USDC.balanceOf(attacker) == USDC_CAPITAL, "USDC funding failed");
-
-        vm.startPrank(attacker);
-        USDT.approve(address(CURVE), type(uint256).max);
-        USDC.approve(address(CURVE), type(uint256).max);
-        USDC.approve(address(fUSDC), type(uint256).max);
-    }
-
-    function profitSummary() public view returns (string memory) {
-        return Strings.append(
-            "FlashSyn ",
-            Strings.appendWithSpace(USDT.balanceOf(address(attacker)) / 1e6, USDC.balanceOf(address(attacker)) / 1e6)
-        );
-    }
-    '''
+    # No start_str literal: the engine reads the harness preamble straight from
+    # examples/harvest_usdt/attack.t.sol (copied into src/foundryModule/src/test/).
+    # See ActionPro.start_str and forge/forgeCollectDVD.py.
 
     # stats = [USDT balance, USDC balance] (whole tokens), parsed from profitSummary().
     def calcProfit(stats):

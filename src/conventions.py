@@ -27,6 +27,35 @@ SEPARATOR_TEXT = "=================== Separator =================="
 PLACEHOLDER = "$$"
 
 
+# The generated collector/attack Solidity is appended directly after the harness
+# preamble (interfaces + contract decl + state vars + setUp + profitSummary). These
+# tokens are the first thing that comes AFTER the preamble in both an authored
+# harness (`function testExampleN()`) and a generated collector file (`function
+# helperN_(...)` emitted by forgeCollectDVD). Slicing a harness at the earliest of
+# them recovers the preamble, so an action model no longer has to duplicate it as a
+# `start_str` literal — see extract_preamble() and FlashSynProActions/ActionPro.py.
+# A harness preamble must therefore NOT contain these tokens (e.g. don't name a
+# helper function "helper" or mention "testExample" in setUp/profitSummary).
+PREAMBLE_BOUNDARIES = ("function testExample", "function helper")
+
+
+def extract_preamble(harness_text):
+    """Return the harness preamble: everything before the first generated/test function.
+
+    Works on both an authored `attack.t.sol` (cut at `function testExample`) and an
+    engine-generated collector file (cut at the earlier `function helper`), so the
+    same slice recovers the preamble whichever the engine reads. Raises if no
+    boundary is present, since silently returning the whole file would append the
+    generated collectors to a full contract and fail to compile cryptically.
+    """
+    cuts = [i for i in (harness_text.find(m) for m in PREAMBLE_BOUNDARIES) if i != -1]
+    if not cuts:
+        raise ValueError(
+            "harness has no {} function; cannot locate the preamble boundary".format(
+                " / ".join(PREAMBLE_BOUNDARIES)))
+    return harness_text[:min(cuts)]
+
+
 def check_placeholder_count(action_name, snippet, num_inputs):
     """Fail loud if an action's Solidity has the wrong number of '$$' markers.
 

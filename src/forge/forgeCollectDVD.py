@@ -10,10 +10,39 @@ sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
 
 import Actions.Adapter
 from Actions.macros import DVD
+from conventions import extract_preamble
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.dirname(dir_path)
 project_path = os.path.dirname(project_path)
+
+HARNESS_PATH = project_path + "/src/foundryModule/src/test/attack.t.sol"
+
+
+def _preamble_for(ActionWrapper):
+    """The harness preamble for this benchmark, cached on the ActionWrapper class.
+
+    Prefer an explicit start_str literal if the action model provides one (Euler
+    still does). Otherwise read it from the authored attack.t.sol so the preamble
+    lives in exactly one place. The first forgedataCollectContractDVD is always
+    built before the harness is first overwritten, and extract_preamble slices the
+    same preamble out of a generated file too, so this is safe to read at any point.
+    """
+    explicit = getattr(ActionWrapper, "start_str", "")
+    if explicit and explicit.strip():
+        return explicit
+    cached = ActionWrapper.__dict__.get("_loaded_preamble")
+    if cached is not None:
+        return cached
+    try:
+        with open(HARNESS_PATH) as f:
+            preamble = extract_preamble(f.read())
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            "no start_str set and no harness at {} to read the preamble from; "
+            "copy the example's attack.t.sol into place first".format(HARNESS_PATH))
+    ActionWrapper._loaded_preamble = preamble
+    return preamble
 
 
 class forgedataCollectContractDVD:
@@ -22,7 +51,7 @@ class forgedataCollectContractDVD:
         self.ExecutionMode = DVD  # 0 for ETH  1 for BSC  2 for DVD
         # block num
         self.ActionWrapper = ActionWrapper
-        self.startStr = ActionWrapper.start_str  # start code of attack tester
+        self.startStr = _preamble_for(ActionWrapper)  # harness preamble (start_str or read from attack.t.sol)
 
         self.dataPoints = []  # parameters input ==> stats collected
         # list of list of list(size = 2)

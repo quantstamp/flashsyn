@@ -37,9 +37,11 @@ class protocolAction(ActionPro):
     
 
 
-    # TODO 4. Paste the entirety of the Foundry script up to but not including the first Action function.
-        # Auditor authoring this file may leave this blank until it is available from the author of the Foundry script.
-    start_str = ''''''
+    # TODO 4. (Optional) The Solidity preamble the collectors are appended to.
+        # Leave this unset and the engine reads it straight from your attack.t.sol —
+        # one source of truth, nothing to keep in sync. Only assign a start_str
+        # literal here if you need to override that (the Euler example still does).
+        # start_str = '''...preamble up to the first testExample function...'''
 
     # TODO 5. Define this function based on the objective function identified in the Protocol Analysis.
     def calcProfit(stats):
