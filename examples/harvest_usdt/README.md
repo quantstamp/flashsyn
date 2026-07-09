@@ -27,29 +27,16 @@ flash-loaned).
 
 ## Run it
 
-Place the two files where the engine expects them, then run **everything from the
-repo root** — the engine loads `settings.toml` relative to the working directory:
+From the repo root (the engine loads `settings.toml` relative to the working directory):
 
 ```sh
-cp examples/harvest_usdt/Harvest_USDTActions.py src/FlashSynProActions/
-cp examples/harvest_usdt/attack.t.sol           src/foundryModule/src/test/attack.t.sol
-mkdir -p initialDataPoints/harvest_usdt
-
-# 1. compile (this one runs inside foundryModule)
-( cd src/foundryModule && ./run.sh Harvest_USDT ETH 11129474 )
-
-# 2. action dependencies
-python3 src/dependencyCheck.py "./run.sh Harvest_USDT ETH 11129474"
-
-# 3. collect data points (runs initialPass)
-python3 src/FlashSynProActions/Harvest_USDTActions.py
-
-# 4. in Harvest_USDTActions.py main(): comment out `ActionWrapper.initialPass(...)`
-#    and uncomment the Synthesizer block
-
-# 5. synthesize
-python3 src/FlashSynProActions/Harvest_USDTActions.py > HarvestUSDTLog.txt
+python3 flashsyn.py compile    harvest_usdt   # compile the harness against the fork
+python3 flashsyn.py collect    harvest_usdt   # collect the initial data points (~2 min)
+python3 flashsyn.py synthesize harvest_usdt   # run the synthesis (~2 min)
 ```
+
+The CLI loads `examples/harvest_usdt/` in place — no copying files into the engine
+and no editing source to switch between collection and synthesis.
 
 Expected result: FlashSyn rediscovers the exploit — best vector
 `Curve_USDT2USDC → fUSDC_deposit → Curve_USDC2USDT → fUSDC_withdraw`, with a

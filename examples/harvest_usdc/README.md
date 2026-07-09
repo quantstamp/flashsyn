@@ -29,29 +29,16 @@ Chain: Ethereum mainnet, fork block **11129500**. Initial capital:
 
 ## Run it
 
-Place the two files where the engine expects them, then run **everything from the
-repo root**:
+From the repo root:
 
 ```sh
-cp examples/harvest_usdc/Harvest_USDCActions.py src/FlashSynProActions/
-cp examples/harvest_usdc/attack.t.sol           src/foundryModule/src/test/attack.t.sol
-mkdir -p initialDataPoints/harvest_usdc
-
-# 1. compile (this one runs inside foundryModule)
-( cd src/foundryModule && ./run.sh Harvest_USDC ETH 11129500 )
-
-# 2. action dependencies
-python3 src/dependencyCheck.py "./run.sh Harvest_USDC ETH 11129500"
-
-# 3. collect data points (runs initialPass)
-python3 src/FlashSynProActions/Harvest_USDCActions.py
-
-# 4. in Harvest_USDCActions.py main(): comment out `ActionWrapper.initialPass(...)`
-#    and uncomment the Synthesizer block
-
-# 5. synthesize
-python3 src/FlashSynProActions/Harvest_USDCActions.py > HarvestUSDCLog.txt
+python3 flashsyn.py compile    harvest_usdc   # compile the harness against the fork
+python3 flashsyn.py collect    harvest_usdc   # collect the initial data points (~2 min)
+python3 flashsyn.py synthesize harvest_usdc   # run the synthesis (~2 min)
 ```
+
+The CLI loads `examples/harvest_usdc/` in place — no copying files into the engine
+and no editing source to switch between collection and synthesis.
 
 Expected result: FlashSyn rediscovers the exploit — best vector
 `Curve_USDC2USDT → fUSDT_deposit → Curve_USDT2USDC → fUSDT_withdraw`, with a

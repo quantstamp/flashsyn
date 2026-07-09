@@ -212,21 +212,24 @@ class fUSDT_withdraw(HarvestUSDCAction):
         return
 
 
-def main():
-    config.ExecutionMode = DVD
+# Longest attack sequence the synthesizer searches (the known exploit is length 4).
+MAX_SYNTHESIS_LEN = 4
 
+
+def flashsyn_setup():
+    """Wire up config + the action DAG. Returns the pieces the flashsyn CLI drives.
+
+    The CLI (flashsyn.py) calls this once, then runs either data collection or
+    synthesis — no more editing main() to toggle between the two.
+    """
+    config.ExecutionMode = DVD
     config.command = "./run.sh Harvest_USDC ETH 11129500"
     config.benchmarkName = "harvest_usdc"
-
-    # ===========================================================================================================
-    # =========================== run dependencyCheck.py to get the following information =====================
-    # ===========================================================================================================
 
     action1 = Curve_USDC2USDT
     action2 = Curve_USDT2USDC
     action3 = fUSDT_deposit
     action4 = fUSDT_withdraw
-
     action_list = [action1, action2, action3, action4]
 
     # If unsure about prestates, list all other actions (safe default).
@@ -234,33 +237,20 @@ def main():
     action2_prestate_dependency = [action1, action3, action4] + [action2]
     action3_prestate_dependency = [action1, action2, action4] + [action3]
     action4_prestate_dependency = [action1, action2, action3] + [action4]
-
     actionDependencies = [action1_prestate_dependency, action2_prestate_dependency,
                           action3_prestate_dependency, action4_prestate_dependency]
 
-    actionDependency = generateActionDependency(action_list, actionDependencies)
+    attackDAGGenerator.setActionDependency(generateActionDependency(action_list, actionDependencies))
 
-    attackDAGGenerator.setActionDependency(actionDependency)
-
-    # ===========================================================================================================
-    # =========================== Set up execution parameters ===================================================
-    # ===========================================================================================================
-
-    ActionWrapper = HarvestUSDCAction
-    ActionWrapper.initialPass(action_list, actionDependencies, ActionWrapper)
+    return {"wrapper": HarvestUSDCAction, "actions": action_list,
+            "dependencies": actionDependencies, "max_len": MAX_SYNTHESIS_LEN}
 
 
-    # CounterExampleLoop = True
-    # Pruning = True
-    # maxSynthesisLen = 4
-
-    # ActionWrapper.runinitialPass()
-    # config.benchmarkName = "harvest_usdc"
-    # config.processNum = 1
-
-    # Synthesizer = synthesizer(action_list, HarvestUSDCAction, config.processNum)
-    # Synthesizer.synthesis(maxSynthesisLen, Pruning, CounterExampleLoop)
-
+def main():
+    # Preferred entrypoint: `python3 flashsyn.py collect harvest_usdc`.
+    # Running this file directly still does one data-collection pass.
+    setup = flashsyn_setup()
+    setup["wrapper"].initialPass(setup["actions"], setup["dependencies"], setup["wrapper"])
 
 
 if __name__ == "__main__":

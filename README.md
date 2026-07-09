@@ -38,24 +38,22 @@ examples/
 
 ## Run procedure
 
+An example that lives under `examples/<name>/` (with a `flashsyn_setup()` in its
+action model) runs through the CLI — no copying files, no editing source to switch
+between collection and synthesis:
+
 ```sh
-# 0. prerequisites: Foundry (see note below) + Python deps
-python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt   # prerequisites: Foundry + Python deps
 
-# 1. compile the Foundry script
-cd src/foundryModule && ./run.sh <contract> <ETH|BSC|Fantom|Polygon> <fork-block>
-
-# 2. compute action dependencies (paste the graph into your action model's main())
-python3 src/dependencyCheck.py "./run.sh <contract> <chain> <fork-block> -vvv"
-
-# 3. collect initial data points
-python3 <your-action-model>.py
-
-# 4. run the synthesis (comment out initialPass(), uncomment the Synthesizer block first)
-python3 <your-action-model>.py > run.log
+python3 flashsyn.py compile    <name>        # compile the harness against the fork
+python3 flashsyn.py deps       <name>        # (optional) action dependency graph
+python3 flashsyn.py collect    <name>        # collect initial data points
+python3 flashsyn.py synthesize <name> > run.log
 ```
 
-The tail of `run.log` prints the best profit and the winning action sequence + parameters.
+The tail of `run.log` prints the best profit and the winning action sequence +
+parameters. (The older Euler example predates the CLI; run it with the manual
+steps below.)
 
 ## Running the Euler example
 
@@ -70,12 +68,13 @@ cp examples/euler/attack.t.sol    src/foundryModule/src/test/attack.t.sol
 Then follow the run procedure with `./run.sh euler ETH 16818064`. See
 [`examples/euler/README.md`](examples/euler/README.md).
 
-Two more worked examples ship the same way: the **Harvest Finance** exploits of
-Oct 2020 — the fUSDC leg ([`examples/harvest_usdt/`](examples/harvest_usdt/README.md),
+Two more worked examples use the streamlined CLI: the **Harvest Finance** exploits
+of Oct 2020 — the fUSDC leg ([`examples/harvest_usdt/`](examples/harvest_usdt/README.md),
 block 11129474) and the fUSDT leg ([`examples/harvest_usdc/`](examples/harvest_usdc/README.md),
 block 11129500). Both are Curve-price-manipulation → vault-mispricing attacks with
-four actions each. Copy their two files into place and run with
-`./run.sh Harvest_USDT ETH 11129474` / `./run.sh Harvest_USDC ETH 11129500`.
+four actions each. Run with `python3 flashsyn.py collect harvest_usdt` then
+`python3 flashsyn.py synthesize harvest_usdt` (likewise `harvest_usdc`) — no file
+copying. Both are verified end-to-end (FlashSyn rediscovers each exploit).
 
 ## Docker
 
