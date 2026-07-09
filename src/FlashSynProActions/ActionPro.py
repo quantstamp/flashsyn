@@ -38,6 +38,9 @@ class ActionPro():
     # to write actionStr() — collectorStr() and transit() are derived from it below.
     tokenInfo = {}
 
+    # How many data points initialPass() aims to collect per action.
+    TARGET_DATA_POINTS = 500
+
     @classmethod
     def string(cls):
         return cls.__name__
@@ -128,10 +131,33 @@ class ActionPro():
             temp = actionDependencies[ii] + [actionList[ii]] 
             actionSpecs.append( temp )
         start = time.time()
-        initialPassCollectData4( actionSpecs , ActionWrapper, TargetDataPoints = 2000, maxLenGlobal = maxLen)
+        initialPassCollectData4( actionSpecs , ActionWrapper, TargetDataPoints = cls.TARGET_DATA_POINTS, maxLenGlobal = maxLen)
         ShowDataPointsForEachAction( action_list_1 )
         end = time.time()
         print("in total it takes %f seconds" % (end - start))
+
+    @classmethod
+    def runinitialPass(cls):
+        # Build one approximator per terminal action from the collected data.
+        # Action sequences come from each pkl's saved names; classes are resolved
+        # via the registry (action_by_name), not by splitting the filename.
+        map = loadDataPoints()
+        helpMap = {}
+        for key in map.keys():
+            payload = map[key]
+            if len(payload) < 3:
+                sys.exit("stale data file '{}.pkl' (pre-registry format); "
+                         "re-run data collection".format(key))
+            points, values, names = payload[0], payload[1], payload[2]
+            actionStr = names[-1]
+            actionList = [cls.action_by_name(n) for n in names]
+            if len(points) > 0:
+                helpMap.setdefault(actionStr, {})[key] = (actionList, [points, values])
+        for actionStr in helpMap.keys():
+            approx = NumericalApproximatorsPro(helpMap[actionStr])
+            target = cls.action_by_name(actionStr)
+            target.approximators = approx
+            target.approximators.refreshTransitFormula()
 
 
 

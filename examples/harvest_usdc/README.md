@@ -8,7 +8,7 @@ the Curve y-pool. The attacker depresses USDT inside the pool, deposits the
 now-cheap USDT into the vault (minting too many shares), restores the pool, and
 redeems the shares for more USDT than it started with.
 
-- `Harvest_USDCActions.py` — the filled-in Python action model.
+- `manifest.toml` — the declarative benchmark (the CLI builds the action model from it).
 - `attack.t.sol` — the filled-in Foundry harness.
 
 Chain: Ethereum mainnet, fork block **11129500**. Initial capital:

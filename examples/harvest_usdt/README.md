@@ -9,8 +9,9 @@ depresses USDC inside the pool, deposits the now-cheap USDC into the vault (mint
 too many shares), restores the pool, and redeems the shares for more USDC than it
 started with.
 
-- `Harvest_USDTActions.py` — the filled-in Python action model (counterpart to `src/FlashSynProActions/template.py`).
-- `attack.t.sol` — the filled-in Foundry harness (counterpart to `src/foundryModule/src/test/template.t.sol`).
+- `manifest.toml` — the declarative benchmark (initial balances, token prices/metadata, and one
+  entry per action). The CLI builds the action model from it — no Python to write.
+- `attack.t.sol` — the Foundry harness (interfaces, `setUp`, `profitSummary`).
 
 Chain: Ethereum mainnet, fork block **11129474**. Initial capital:
 18,308,555.417594 USDT + 50,000,000 USDC (the amounts the historical attack

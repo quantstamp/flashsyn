@@ -1,0 +1,57 @@
+# Harvest Finance exploit (fUSDC vault), 26 Oct 2020, block 11129474.
+# Declarative benchmark: the flashsyn CLI builds the action model from this file;
+# the Solidity harness lives next to it in attack.t.sol.
+
+name = "harvest_usdt"
+contract = "Harvest_USDT"   # --match-contract name in attack.t.sol
+chain = "ETH"
+block = 11129474
+max_synthesis_len = 4
+
+# Profit = sum over these of (final - initial) * price, in profitSummary() output order.
+profit_tokens = ["USDT", "USDC"]
+
+# Capital the historical exploit flash-loaned; keep consistent with the harness setUp().
+[initial_balances]
+USDT = 18308555.417594
+USDC = 50000000
+
+# Both legs are USD stablecoins.
+[token_prices]
+USDT = 1.0
+USDC = 1.0
+
+# token -> [contract variable in the harness, decimals]; used to auto-build collectors.
+[token_info]
+USDT = ["USDT", 6]
+USDC = ["USDC", 6]
+fUSDC = ["fUSDC", 6]
+
+# One entry per protocol action. numInputs is the count of $$ in `solidity`.
+[[actions]]
+name = "Curve_USDT2USDC"
+tokens_in = ["USDT"]
+tokens_out = ["USDC"]
+range = [0, 20000000]
+solidity = "CURVE.exchange_underlying(2, 1, $$ * 1e6, 0);"
+
+[[actions]]
+name = "Curve_USDC2USDT"
+tokens_in = ["USDC"]
+tokens_out = ["USDT"]
+range = [0, 20000000]
+solidity = "CURVE.exchange_underlying(1, 2, $$ * 1e6, 0);"
+
+[[actions]]
+name = "fUSDC_deposit"
+tokens_in = ["USDC"]
+tokens_out = ["fUSDC"]
+range = [0, 50000000]
+solidity = "fUSDC.deposit($$ * 1e6);"
+
+[[actions]]
+name = "fUSDC_withdraw"
+tokens_in = ["fUSDC"]
+tokens_out = ["USDC"]
+range = [0, 60000000]
+solidity = "fUSDC.withdraw($$ * 1e6);"
