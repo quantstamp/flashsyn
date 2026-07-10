@@ -65,6 +65,22 @@ python3 flashsyn.py synthesize <name> > run.log
 The tail of `run.log` prints the best profit and the winning action sequence +
 parameters. This works for **every** example, including Euler.
 
+**Faster runs (`--fast-using-anvil`).** Add `--fast-using-anvil` to any subcommand to
+route forge through one local [anvil](https://book.getfoundry.sh/anvil/) fork of the
+example's chain/block instead of re-forking over the RPC on every invocation:
+
+```sh
+python3 flashsyn.py collect euler --fast-using-anvil     # ~3.4x faster (248s -> 72s)
+```
+
+`collect` fires forge ~200 times, and each fresh forge re-establishes its fork over the
+RPC (several sequential round-trips); anvil collapses those to localhost. Measured
+**3.44x on the Euler collect** (identical data, zero flakes); `synthesize` gains only
+~5% since it's dominated by the optimizer, not forge. The flag needs `anvil` on PATH
+(ships with Foundry) and the chain's real endpoint to fork from (`ETH=<rpc>`, else
+run.sh's default). Under Docker, the `foundry-cache` volume persists fetched fork state
+across `--rm` runs, compounding the win.
+
 ## Worked examples
 
 The **Euler Finance** exploit (March 2023) is the reference **Python action-model** example

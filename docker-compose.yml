@@ -4,6 +4,11 @@
 #
 # The bind mount keeps generated files (attack.t.sol edits, initialDataPoints/, logs)
 # on the host so they survive the container. Override RPC endpoints via the env vars.
+#
+# anvil ships with Foundry in the image, so `python3 flashsyn.py collect <ex>
+# --fast-using-anvil` works out of the box (a persistent local fork, ~3.4x faster on
+# collect). The named foundry-cache volume below persists fetched fork state across
+# `--rm` runs, so RPC round-trips are paid once and reused (helps plain and anvil runs).
 services:
   flashsyn:
     build:
@@ -12,6 +17,7 @@ services:
         FOUNDRY_INSTALL: ${FOUNDRY_INSTALL:-latest}
     volumes:
       - .:/flashsyn
+      - foundry-cache:/root/.foundry/cache   # persist fetched fork state across runs
     environment:
       # supply your own archive-node endpoints (used by src/foundryModule/run.sh)
       ETH: ${ETH:-}
@@ -21,3 +27,6 @@ services:
     working_dir: /flashsyn
     stdin_open: true
     tty: true
+
+volumes:
+  foundry-cache:
