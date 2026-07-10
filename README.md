@@ -23,7 +23,7 @@ src/
     src/test/template.t.sol   <-- copy this    # Solidity harness template
     lib/                                       # ds-test, forge-std, mylib, openzeppelin
 examples/
-  euler/                                       # worked example (opt-in, not on the default path)
+  euler/                                       # worked example — Euler self-liquidation (Python model)
   harvest_usdt/                                # worked example — Harvest Finance fUSDC leg (2020)
   harvest_usdc/                                # worked example — Harvest Finance fUSDT leg (2020)
   puppet/                                      # worked example — Damn Vulnerable DeFi "Puppet" (local deploy)
@@ -63,20 +63,16 @@ python3 flashsyn.py synthesize <name> > run.log
 ```
 
 The tail of `run.log` prints the best profit and the winning action sequence +
-parameters. (The older Euler example predates the CLI; run it with the manual
-steps below.)
+parameters. This works for **every** example, including Euler.
 
-## Running the Euler example
+## Worked examples
 
-The example is kept off the default path so a fresh clone stays blank. To run it, place its two files
-where the engine expects them:
-
-```sh
-cp examples/euler/EulerActions.py src/FlashSynProActions/
-cp examples/euler/attack.t.sol    src/foundryModule/src/test/attack.t.sol
-```
-
-Then follow the run procedure with `./run.sh euler ETH 16818064`. See
+The **Euler Finance** exploit (March 2023) is the reference **Python action-model** example
+— its self-liquidation zeroes several balances at once, which a `manifest.toml` can't
+express. It runs through the CLI like the others (`python3 flashsyn.py collect euler` then
+`python3 flashsyn.py synthesize euler`); FlashSyn rediscovers the exploit —
+`eulerDeposit → eulerMint → eulerDonate → eulerLiquidateWithdraw`, **Best Profit 29,185,439**,
+params `[199600000, 1479041079, 423197409]`. See
 [`examples/euler/README.md`](examples/euler/README.md).
 
 Two more worked examples use the streamlined CLI: the **Harvest Finance** exploits
@@ -132,13 +128,14 @@ for the historical note below:
 > `foundryup -C <commit>` also no longer offers prebuilt-by-commit binaries. The exact 2023 forge
 > can't be reproduced today — which is why the parsers were modernised instead.
 
-**Verification status.** Run end-to-end against the Euler example on native arm64 with the modern
-stack (Python 3.12, numpy 2.2 / scipy 1.15 / scikit-learn 1.6, vendored shgo; mainnet archive fork
-at block 16818064, forge 1.7.1): compile → synthesis passes and FlashSyn **rediscovers the exploit** —
-sequence `deposit → mint → donate → liquidateWithdraw`, **Best Profit 22,415,805** with parameters
-`[100585937, 1501953125, 908203125]`, byte-identical to the frozen-stack (scipy 1.7.3) reference run.
-This equivalence is what pins the vendored shgo: with stock modern scipy shgo the same run yields
-`0 executions succeed` and never converges.
+**Verification status.** Run end-to-end through the CLI against the Euler example on native arm64 with
+the modern stack (Python 3.12, numpy 2.2 / scipy 1.15 / scikit-learn 1.6, vendored shgo; mainnet archive
+fork at block 16818064, forge 1.7.1): `collect` → `synthesize` and FlashSyn **rediscovers the exploit** —
+sequence `deposit → mint → donate → liquidateWithdraw`, **Best Profit 29,185,439** with parameters
+`[199600000, 1479041079, 423197409]`. (This is a higher-profit parameterization than the historical
+~$22.4M frozen-stack reference; the modern optimizer settles on a different optimum given the data the
+CLI collects. shgo itself is deterministic per data set — this is why the vendored copy is pinned: with
+stock modern scipy shgo the same run yields `0 executions succeed` and never converges.)
 
 > Note: run FlashSyn commands from the **repo root** — `settings.toml` is loaded via a path relative
 > to the working directory.
@@ -153,8 +150,8 @@ This equivalence is what pins the vendored shgo: with stock modern scipy shgo th
   the optima it returns in ≥4 dimensions and stops FlashSyn's candidates from validating on-chain. So
   `src/vendored_shgo/` carries a self-contained copy of scipy 1.7.3's shgo, and the engine imports that
   instead of `scipy.optimize.shgo`. This keeps results reproducible on the modern stack (verified: the
-  Euler example rediscovers the exact ~$22.4M exploit, identical to the frozen-stack reference). Do not
-  swap it back to the stock scipy shgo without re-verifying the Euler result.
+  Euler example rediscovers the self-liquidation exploit end-to-end via the CLI). Do not swap it back to
+  the stock scipy shgo without re-verifying the Euler result.
 - **RPC** — `settings.toml` / `run.sh` carry shared, rented archive-node endpoints that may be closed;
   supply your own.
 - **Runtime** — a full Euler synthesis was ~10–12 min under the old amd64-emulation image (Apple
