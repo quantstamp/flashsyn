@@ -464,7 +464,14 @@ class eulerTouch(eulerAction):
         '''
         return action
 
-    # TODO
+    @classmethod
+    def collectorStr(cls):
+        action = '''      // Collect: eUSDC touch (no measured output)
+        eUSDC.touch();
+        revert(Strings.append("FlashSyn: ", uint(0)));
+        '''
+        return action
+
     # How are we gonna use the output of the approximator?
     # We need to update the global states and change user balances
     @classmethod
@@ -475,8 +482,19 @@ class eulerTouch(eulerAction):
 
 
 
+def flashsyn_setup():
+    config.ExecutionMode = DVD
+    config.command = "./run.sh euler ETH 16818064"
+    config.benchmarkName = "euler"
+    actions = [eulerDeposit, eulerBurn, eulerTouch, eulerDonate, eulerMint, eulerLiquidateWithdraw]
+    dependencies = [[b for b in actions if b is not a] + [a] for a in actions]
+    AttackDAGGenerator.setActionDependency(generateActionDependency(actions, dependencies))
+    return {"wrapper": eulerAction, "actions": actions,
+            "dependencies": dependencies, "max_len": 6}
+
+
 def main():
-    # Do not change. 
+    # Do not change.
     config.ExecutionMode = DVD  # DVD for normal cases.
 
     config.command = "./run.sh euler ETH 16818064"  # the command used by the foundry to run the contract

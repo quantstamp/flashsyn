@@ -724,4 +724,8 @@ def initialPassCollectData4(actionSpecs, ActionWrapper, TargetDataPoints = 1000,
                 break
 
         if totalCount == 0:
-            exit()
+            # No collectable data for this action (e.g. a no-op like eUSDC.touch(),
+            # whose only value is a filtered-out 0). Skip it and keep collecting the
+            # remaining actions rather than aborting the whole run.
+            print("WARNING: no data points collected for {}; skipping".format(action_list[-1].__name__))
+            continue

@@ -169,8 +169,22 @@ class ForgeDataCollectorDVD:
         if "--json" not in command:
             command += " --json"
 
-        output = subprocess.run(command, capture_output=True,
-                                shell=True, cwd=project_path + "/src/foundryModule/")
+        # forge occasionally returns empty stdout on a transient fork-RPC failure
+        # (rate limit / timeout on the archive node). The old code fed that empty
+        # output straight to the parser, so a whole batch of data points vanished
+        # silently — which is how a legitimate sequence (e.g. the single-action
+        # [deposit] prefix) can end up with no data and later get pruned. Retry a
+        # few times on empty stdout, and surface stderr so a *deterministic* failure
+        # (a real solc/compile error) is distinguishable from a transient one.
+        output = None
+        for attempt in range(3):
+            output = subprocess.run(command, capture_output=True,
+                                    shell=True, cwd=project_path + "/src/foundryModule/")
+            if output.stdout and output.stdout.strip():
+                break
+            sys.stderr.write(
+                "forgeCollect: empty forge stdout (attempt {}/3); stderr tail: {!r}\n".format(
+                    attempt + 1, (output.stderr or b"")[-400:]))
 
         print(command)
         print(str(output.stdout)[:150])

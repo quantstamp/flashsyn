@@ -428,8 +428,15 @@ class AttackDAGGenerator():
                     break
         
         if equivalentIndex != -1:
+            # Cache the name here too: without this, a sequence that maps to an
+            # existing (equivalent) DAG is never memoised, so a later lookup of the
+            # same sequence re-runs the equivalence search against a now-larger
+            # `generated` list and can mint a fresh, non-matching index — which makes
+            # Pruning 6's dataMap lookup miss the data runinitialPass keyed under the
+            # original index. Memoising keeps a sequence pinned to one stable index.
+            cls.name2index[name] = equivalentIndex
             return dag, equivalentIndex
-        
+
         cls.subTree.append(subDAGIndexes)
         cls.superTree.append(superDAGIndexes)
         thisDAGIndex = len(cls.subTree) - 1
