@@ -5,12 +5,18 @@ Usage (from the repo root):
     python3 flashsyn.py compile    <example> [--fast-using-anvil]
     python3 flashsyn.py deps       <example> [--fast-using-anvil]
     python3 flashsyn.py collect    <example> [--fast-using-anvil]
-    python3 flashsyn.py synthesize <example> [--fast-using-anvil]
+    python3 flashsyn.py synthesize <example> [--fast-using-anvil] [--jobs N]
 
 <example> is a directory under examples/ (e.g. harvest_usdt). It must hold exactly
 one <Name>Actions.py exposing flashsyn_setup() and one attack.t.sol. The CLI places
 the harness where forge expects it and drives collect-vs-synthesize by subcommand,
 replacing the old "cp two files, then comment-toggle main()" flow.
+
+--jobs N parallelises `synthesize` across N processes (default 1): each round's
+candidate traces have their shgo optimisation run concurrently. Gains are sublinear —
+parallelism is only within a round, and the counter-example rounds are sequential — so
+it scales with search breadth, not cleanly with N. (`collect` is unaffected: it's
+forge-bound, which is what --fast-using-anvil addresses.)
 
 --fast-using-anvil starts ONE local anvil fork of the example's chain/block for the whole command
 and points forge at it. `collect` fires forge ~200 times and each fresh forge process
@@ -66,6 +72,12 @@ def _load_example(name):
         sys.exit("examples/{}: need a manifest.toml or exactly one *Actions.py, found {}".format(name, models))
     spec = importlib.util.spec_from_file_location("flashsyn_example", os.path.join(exdir, models[0]))
     mod = importlib.util.module_from_spec(spec)
+    # Register in sys.modules BEFORE exec so the module is importable by name. The
+    # example's action classes get __module__ == "flashsyn_example"; --jobs > 1 pickles
+    # them to the worker/manager processes, which re-import that module to unpickle —
+    # forked children inherit this sys.modules entry, so without it they fail with
+    # "Can't pickle <class 'flashsyn_example...'>: import of module failed".
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     if not hasattr(mod, "flashsyn_setup"):
         sys.exit("examples/{}/{} does not define flashsyn_setup()".format(name, models[0]))
@@ -112,16 +124,38 @@ def _start_anvil(rpc, block, port=8545):
     sys.exit("--fast-using-anvil: anvil did not become ready in time")
 
 
-def main():
-    use_anvil = "--fast-using-anvil" in sys.argv
-    argv = [a for a in sys.argv if a != "--fast-using-anvil"]
-    if len(argv) != 3 or argv[1] not in ("compile", "deps", "collect", "synthesize"):
+def _parse_args(args):
+    """Pull flags out of the arg list, returning (cmd, name, use_anvil, jobs).
+
+    Flags: --fast-using-anvil (bool) and --jobs N / --jobs=N (int, clamped to 1..cpus).
+    """
+    use_anvil = "--fast-using-anvil" in args
+    jobs = "1"
+    positional = []
+    it = iter(a for a in args if a != "--fast-using-anvil")
+    for a in it:
+        if a == "--jobs":
+            jobs = next(it, "1")
+        elif a.startswith("--jobs="):
+            jobs = a.split("=", 1)[1]
+        else:
+            positional.append(a)
+    try:
+        jobs = max(1, min(int(jobs), os.cpu_count() or 1))
+    except ValueError:
+        sys.exit("--jobs takes an integer")
+    if len(positional) != 2 or positional[0] not in ("compile", "deps", "collect", "synthesize"):
         sys.exit(__doc__)
-    cmd, name = argv[1], argv[2]
+    return positional[0], positional[1], use_anvil, jobs
+
+
+def main():
+    cmd, name, use_anvil, jobs = _parse_args(sys.argv[1:])
     os.chdir(ROOT)  # settings.toml + run.sh resolve relative to the repo root
 
     setup = _load_example(name)
     import config
+    config.processNum = jobs  # synthesize parallelises its per-trace shgo across this many
 
     anvil_proc = None
     if use_anvil:
@@ -148,7 +182,6 @@ def main():
             from synthesizer import Synthesizer
             w = setup["wrapper"]
             w.runinitialPass()
-            config.processNum = getattr(config, "processNum", 1) or 1
             Synthesizer(setup["actions"], w, config.processNum).synthesis(setup["max_len"], True, True)
     finally:
         if anvil_proc is not None:
