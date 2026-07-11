@@ -220,10 +220,19 @@ class AttackDAG():
         
 
     def setSimplifierExpander(self, targetAttackDAG):
-        # when doing initial data pass, 
+        # when doing initial data pass,
         #      convert equivalent dags to equivalent dags
-        # when doing inference, 
+        # when doing inference,
         #      convert smaller dag to larger dag
+        #
+        # The mapping depends only on (self, targetAttackDAG) — both immutable once built
+        # by generateDAG — yet simulate() calls this ~15M times per synthesis with the
+        # SAME pair (only the numeric inputs vary), each time re-running the expensive
+        # isSubDAGOf graph match. That recompute was ~75% of synthesize's runtime, so
+        # skip it when the target is unchanged (identity check: generateDAG returns the
+        # same cached DAG object each call, so the hot path hits this).
+        if getattr(self, "targetAttackDAG", None) is targetAttackDAG:
+            return
         possibleMappings = self.isSubDAGOf(targetAttackDAG)
         ConverterInputIndexesVector = []
         for possibleMapping in possibleMappings:
