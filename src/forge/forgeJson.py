@@ -40,19 +40,39 @@ def _extract_json(stdout) -> str:
     return text[start:] if start != -1 else ""
 
 
-def _stats_from_reason(reason):
-    """Return the collected stats from a revert reason, or None.
+_NAMED = re.compile(r"([A-Za-z_]\w*)=(\d+)")
 
-    Only integers AFTER the marker count as stats — parsing the whole string
-    would pick up any incidental digit (a token symbol, an error code) that
-    happened to precede the marker.
+
+def _stats_from_reason(reason, order=None):
+    """Return the collected stats (a positional list of ints) from a revert reason, or None.
+
+    Two revert shapes share the marker:
+      - Named (the Collect helper's flush):  "FlashSyn: eUSDC=123 dUSDC=456"
+      - Positional (profitSummary, or a bare "FlashSyn: 0"):  "FlashSyn: 268 400"
+
+    For the named shape, `order` (the terminal action's measured-token names, in approxN
+    order) maps values to positions independently of the emit order — so the collector
+    can list tokens in any order. Without `order` we fall back to emit order. A name in
+    `order` that the revert didn't report is a real producer/consumer mismatch, so raise.
+    Only text AFTER the marker is parsed, so a digit before it can't leak in.
     """
     if not reason:
         return None
     pos = reason.find(FLASHSYN_MARKER)
     if pos == -1:
         return None
-    stats = [int(s) for s in re.findall(r"\d+", reason[pos + len(FLASHSYN_MARKER):])]
+    tail = reason[pos + len(FLASHSYN_MARKER):]
+    named = _NAMED.findall(tail)
+    if named:
+        by_name = {name: int(v) for name, v in named}
+        if order is not None:
+            missing = [t for t in order if t not in by_name]
+            if missing:
+                raise KeyError("collector reported {} but the action measures {}; missing {}".format(
+                    sorted(by_name), list(order), missing))
+            return [by_name[t] for t in order]
+        return [int(v) for _, v in named]        # emit order (already approxN order by construction)
+    stats = [int(s) for s in re.findall(r"\d+", tail)]
     return stats if stats else None
 
 
@@ -103,5 +123,7 @@ def parse_datapoints(stdout, dataPoints):
                 sys.stderr.write("forgeJson: warning - tests {} and {} both map to data point "
                                  "{}; using the latter\n".format(seen[idx], name, idx))
             seen[idx] = name
-            dataPoints[idx][1] = _stats_from_reason(res.get("reason"))
+            entry = dataPoints[idx]
+            order = entry[2] if len(entry) > 2 else None   # measured-token names, if the producer set them
+            entry[1] = _stats_from_reason(res.get("reason"), order)
     return dataPoints

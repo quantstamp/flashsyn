@@ -258,7 +258,7 @@ contract attackTester is DSTest, stdCheats {
     #     with open(project_path + "/src/foundryModule/src/attack.sol", "w") as solFile:
     #         solFile.write(start_str + contract + end_str)
 
-    def addDataCollector(self, paraList):
+    def addDataCollector(self, paraList, order=None):
         self.testStr += "    function testExample" + str(self.dataCollectorCount) + "_" \
             + "() public {\n      attackContract.attack" \
             + str(self.functionCounter - 1) + "("
@@ -275,7 +275,7 @@ contract attackTester is DSTest, stdCheats {
                     self.testStr += ");\n    }\n"
 
         self.dataCollectorCount += 1
-        self.dataPoints.append([paraList, None])
+        self.dataPoints.append([paraList, None, order])
         return self.dataCollectorCount - 1
 
     def cleanDataCollector(self):

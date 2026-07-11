@@ -29,6 +29,11 @@ def _dp(n):
     return [[[i], None] for i in range(n)]
 
 
+def _dp_ordered(orders):
+    """Data points carrying a measured-token order: [[paras], stats, order]."""
+    return [[[i], None, order] for i, order in enumerate(orders)]
+
+
 class ParseDatapointsTest(unittest.TestCase):
     def test_multi_and_single_value_and_index_from_name(self):
         out = _forge_json({
@@ -38,6 +43,23 @@ class ParseDatapointsTest(unittest.TestCase):
         dp = parse_datapoints(out, _dp(2))
         self.assertEqual(dp[0][1], [123, 456])
         self.assertEqual(dp[1][1], [789])
+
+    def test_named_reverts_map_to_positions_by_order(self):
+        # The Collect helper reverts "FlashSyn: tok=val ..."; the recorded order
+        # (approxN order) maps values to positions regardless of the EMIT order, so a
+        # collector that lists dUSDC before eUSDC still lands them in [eUSDC, dUSDC].
+        out = _forge_json({"testExample0_()": FLASHSYN_MARKER + ": dUSDC=456 eUSDC=123"})
+        dp = parse_datapoints(out, _dp_ordered([["eUSDC", "dUSDC"]]))
+        self.assertEqual(dp[0][1], [123, 456])
+
+    def test_named_without_order_falls_back_to_emit_order(self):
+        out = _forge_json({"testExample0_()": FLASHSYN_MARKER + ": eUSDC=123 dUSDC=456"})
+        self.assertEqual(parse_datapoints(out, _dp(1))[0][1], [123, 456])
+
+    def test_named_token_with_a_digit_is_not_split(self):
+        # a positional \d+ scan would read [2, 5]; named parsing keeps USDT2 as one name
+        out = _forge_json({"testExample0_()": FLASHSYN_MARKER + ": USDT2=5"})
+        self.assertEqual(parse_datapoints(out, _dp_ordered([["USDT2"]]))[0][1], [5])
 
     def test_no_marker_is_none(self):
         out = _forge_json({"testExample0_()": "e/collateral-violation"})

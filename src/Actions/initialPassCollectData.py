@@ -183,7 +183,7 @@ def initialPassCollectData(action_lists, ActionWrapper, TargetDataPoints = 1000)
                     para_product = randomlyPickUpPoints(bounds, totalPoints)
                     forge.cleanDataCollector()
                     for pp in para_product:
-                        forge.addDataCollector(pp)
+                        forge.addDataCollector(pp, getattr(action_list[-1], "_measured_tokens", None))
                     forge.updateDataCollectorContract()
                     datapoints = forge.executeCollectData()
                     print("data points tried: ", len(datapoints))
@@ -298,7 +298,7 @@ def initialPassCollectData2(action_lists, ActionWrapper, TargetDataPoints = 1000
 
                 forge.cleanDataCollector()
                 for pp in para_product:
-                    forge.addDataCollector(pp)
+                    forge.addDataCollector(pp, getattr(action_list[-1], "_measured_tokens", None))
 
                 forge.updateDataCollectorContract()
                 datapoints = forge.executeCollectData()
@@ -464,7 +464,7 @@ def initialPassCollectData3(action_lists, ActionWrapper, TargetDataPoints = 1000
                     para_product = randomlyPickUpPoints(bounds, totalPoints)
                     forge.cleanDataCollector()
                     for pp in para_product:
-                        forge.addDataCollector(pp)
+                        forge.addDataCollector(pp, getattr(action_list[-1], "_measured_tokens", None))
                     forge.updateDataCollectorContract()
                     datapoints = forge.executeCollectData()
                     print("data points tried: ", len(datapoints))
@@ -669,7 +669,7 @@ def initialPassCollectData4(actionSpecs, ActionWrapper, TargetDataPoints = 1000,
                 para_product = randomlyPickUpPoints(bounds, totalPoints)
                 forge.cleanDataCollector()
                 for pp in para_product:
-                    forge.addDataCollector(pp)
+                    forge.addDataCollector(pp, getattr(action_list[-1], "_measured_tokens", None))
                 forge.updateDataCollectorContract()
                 datapoints = forge.executeCollectData()
                 print("data points tried: ", len(datapoints))

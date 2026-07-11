@@ -200,10 +200,14 @@ def load(manifest_path):
             "range": list(a["range"]),
             "actionStr": classmethod(_make_action_str(a["name"], solidity)),
         }
+        measures = _measures_for(a)
+        # measured-token names in approxN order; the parser maps a named collector revert
+        # to positions with this, so the collector's emit order doesn't have to match.
+        attrs["_measured_tokens"] = [tok for tok, _ in measures]
         if "collect.balanceChange" in solidity:
             attrs["collectorStr"] = classmethod(_make_inline_collector())              # Mode B: author records inline
         else:
-            attrs["collectorStr"] = classmethod(_make_collect_collector(_measures_for(a), token_info))  # Mode A: derived
+            attrs["collectorStr"] = classmethod(_make_collect_collector(measures, token_info))  # Mode A: derived
         if "effects" in a:
             attrs["transit"] = classmethod(_make_transit(num_inputs, a["effects"]))
         actions.append(type(a["name"], (wrapper,), attrs))

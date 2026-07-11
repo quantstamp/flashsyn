@@ -125,7 +125,7 @@ class ForgeDataCollectorDVD:
         self.dataCollectorCount = 0
         self.attackContract = contract
 
-    def addDataCollector(self, paraList):
+    def addDataCollector(self, paraList, order=None):
         if not self.isAddcollectorContract2:
             self.collectorContract += self.collectorContract2
             self.isAddcollectorContract2 = True
@@ -144,7 +144,9 @@ class ForgeDataCollectorDVD:
         '''
         self.collectorContract += temp
         self.dataCollectorCount += 1
-        self.dataPoints.append([paraList, None])
+        # order = the terminal action's measured-token names (approxN order), so the parser
+        # can map a named "FlashSyn: tok=val ..." revert to positions regardless of emit order.
+        self.dataPoints.append([paraList, None, order])
         # print(self.dataCollectorCount - 1)
         return self.dataCollectorCount - 1
 

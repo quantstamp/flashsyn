@@ -592,7 +592,7 @@ def executeAndAddDataPointsWithoutChecking(action_list, ActionWrapper, paras):
 
         for jj in range(len(para_product)):
             pp = para_product[jj]
-            data_collector_index = forge.addDataCollector(pp[0: numOfParas])
+            data_collector_index = forge.addDataCollector(pp[0: numOfParas], getattr(cA[-1], "_measured_tokens", None))
             if jj == 0:
                 dataCollector_map[str(cA)] = [
                     data_collector_index, data_collector_index]
@@ -676,7 +676,7 @@ def executeAndGetStats(action_lists, paras, ActionWrapper):
             for kk in range(len(para_product)):
                 pp = para_product[kk]
                 data_collector_index = forge.addDataCollector(
-                    pp[0: numOfParas])
+                    pp[0: numOfParas], getattr(cA[-1], "_measured_tokens", None))
                 if kk == 0:
                     dataCollector_map[ToString(cA)] = [
                         data_collector_index, data_collector_index]
@@ -749,7 +749,7 @@ def executeAndAddDataPoints(action_list, ActionWrapper, paras, show=False):
 
         for jj in range(len(para_product)):
             pp = para_product[jj]
-            data_collector_index = forge.addDataCollector(pp[0: numOfParas])
+            data_collector_index = forge.addDataCollector(pp[0: numOfParas], getattr(cA[-1], "_measured_tokens", None))
             if jj == 0:
                 dataCollector_map[str(cA)] = [
                     data_collector_index, data_collector_index]
