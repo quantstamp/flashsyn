@@ -13,13 +13,13 @@ the harness where forge expects it and drives collect-vs-synthesize by subcomman
 replacing the old "cp two files, then comment-toggle main()" flow.
 
 --jobs N parallelises `synthesize` across N processes (default 1): each round's
-candidate traces have their shgo optimisation run concurrently. MEASURED NEGLIGIBLE on
-the bundled examples (Euler: ~2% even at jobs=8) — synthesize is bottlenecked on the
-single-threaded Python that processes each round's exploded candidate set (thousands of
-(trace, params) pairs), not on the shgo this parallelises, and not on BLAS (the fits are
-too small to thread) or forge. It only pays off on genuinely broad-search examples where
-shgo is a larger fraction; the real lever is shrinking the candidate explosion itself.
-(`collect` is unaffected: it's forge-bound, which is what --fast-using-anvil addresses.)
+candidate traces have their shgo optimisation run concurrently. Before the
+AttackDAG.setSimplifierExpander memoisation this was negligible (~2% even at jobs=8)
+because redundant DAG matching dominated the runtime; with that removed it gives a modest
+real gain — Euler: jobs=2 is 130s->104s (~1.25x), plateauing by jobs=4 and regressing at
+jobs=8 (only ~7 traces/round, so extra workers just add fork/IPC overhead). Sweet spot
+~2-4; it scales with search breadth (traces per round), not with N. (`collect` is
+unaffected: it's forge-bound — use --fast-using-anvil.)
 
 --fast-using-anvil starts ONE local anvil fork of the example's chain/block for the whole command
 and points forge at it. `collect` fires forge ~200 times and each fresh forge process
