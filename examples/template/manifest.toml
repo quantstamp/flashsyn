@@ -16,6 +16,11 @@ chain = "ETH"              # ETH | BSC | Fantom | Polygon  (endpoints in src/fou
 block = 12345678           # fork block, just before the exploit
 max_synthesis_len = 5      # longest action sequence the synthesizer searches
 
+# Collectors are derived from each action's tokens_out/effects and emitted through the
+# harness's Collect helper (deployed in setUp). A plain action needs nothing extra; an
+# action measuring an internal value records it inline (see PoolBorrow in examples/puppet).
+use_collect_helper = true
+
 # Which tokens count toward profit, in the SAME ORDER your profitSummary() prints them.
 # profit = sum over these of (final_balance - initial_balance) * price.  (auto-derived)
 profit_tokens = ["TOKENA", "TOKENB"]
@@ -92,22 +97,27 @@ tokens_out = ["TOKENA"]
 range = [0, 60000000]
 solidity = "VAULT.withdraw($$);"
 
-# ESCAPE HATCH: when an action's fund movement doesn't fit "the $$ params are the consumed
-# amounts and the outputs go to tokens_out", two optional per-action fields cover it — no
-# Python needed. See examples/puppet and examples/euler for real uses.
+# ESCAPE HATCH: when an action doesn't fit "the $$ params are the consumed amounts and the
+# outputs go to tokens_out", two things cover it — no Python. See examples/puppet & euler.
+#
+# 1. effects — declarative transit, replacing the default. op = add|sub|set, src = paramN
+#    (the Nth $$) | approxN (the Nth measured value) | 0. Also drives what the collector
+#    measures: each approxN token, add -> after-before (gain), sub -> before-after (spend).
+# 2. inline measurement — when the measured quantity is an INTERNAL value (not a start-to-end
+#    balance delta, e.g. borrow's collateral _dep), record it in `solidity` with
+#    collect.balanceChange("<token>", wholeTokenValue); the engine just adds collect.flush().
 #
 #   [[actions]]
 #   name = "PoolBorrow"
 #   tokens_in  = ["ETH"]      # flow only (for the search graph)
 #   tokens_out = ["DVT"]
 #   range = [0, 100000]
-#   solidity = "..."
-#   # collector: raw Solidity used verbatim, replacing the derived balanceOf collector
-#   # (native ETH, an input-side amount, custom decimals).
-#   collector = """...revert(Strings.append("FlashSyn: ", _dep / 1e18));"""
-#   # effects: declarative transit, replacing the default. op = add|sub|set,
-#   # src = paramN (the Nth $$) | approxN (the Nth collector output) | 0.
+#   solidity = """
+#       _amt = $$ * 1e18;
+#       _dep = pool.calculateDepositRequired(_amt);
+#       pool.borrow{value: _dep}(_amt);
+#       collect.balanceChange("ETH", _dep / 1e18);"""   # <- inline measured value
 #   effects = [
 #     { token = "DVT", op = "add", src = "param0" },   # received == the parameter
-#     { token = "ETH", op = "sub", src = "approx0" },  # collateral == the approximation
+#     { token = "ETH", op = "sub", src = "approx0" },  # collateral == the recorded _dep
 #   ]

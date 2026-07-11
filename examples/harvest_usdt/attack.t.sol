@@ -11,6 +11,7 @@ import {DSTest} from "ds-test/test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
+import {Collect} from "mylib/Collect.sol";
 
 
 interface IUSDC {
@@ -54,7 +55,10 @@ contract Harvest_USDT is DSTest, stdCheats {
     uint256 constant USDC_CAPITAL = 50000000e6;      // 50,000,000 USDC
     uint256 constant USDT_CAPITAL = 18308555417594;  // 18,308,555.417594 USDT
 
+    Collect internal collect;
+
     function setUp() public {
+        collect = new Collect();
         vm.label(attacker, "Attacker");
 
         // Fund USDC through the real masterMinter (same path as the Euler example).

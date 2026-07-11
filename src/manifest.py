@@ -141,6 +141,15 @@ def _measures_for(action):
     return [(t, "gain") for t in action["tokens_out"]]
 
 
+def _make_inline_collector():
+    """Collector for an action that records its own measurement inline in `solidity`
+    (a collect.balanceChange(...) call — e.g. an internal value like borrow's _dep that
+    isn't a start-to-end balance delta). The engine only appends collect.flush()."""
+    def collectorStr(cls):
+        return "        // Collect: {}\n".format(cls.__name__) + cls.actionStr() + "        collect.flush();\n"
+    return collectorStr
+
+
 def _make_collect_collector(measures, token_info):
     """A collectorStr that measures each (token, direction) as a balance delta and
     records it with collect.balanceChange(name, wholeTokenDelta); the harness's
@@ -201,8 +210,12 @@ def load(manifest_path):
         if use_collect:
             if "collector" in a:
                 raise ValueError("action {}: 'collector' is not used with use_collect_helper "
-                                 "(the collector is derived from effects)".format(a["name"]))
-            attrs["collectorStr"] = classmethod(_make_collect_collector(_measures_for(a), token_info))
+                                 "(the collector is derived from effects, or write "
+                                 "collect.balanceChange(...) inline in solidity)".format(a["name"]))
+            if "collect.balanceChange" in solidity:
+                attrs["collectorStr"] = classmethod(_make_inline_collector())          # Mode B: author records inline
+            else:
+                attrs["collectorStr"] = classmethod(_make_collect_collector(_measures_for(a), token_info))  # Mode A: derived
         elif "collector" in a:
             attrs["collectorStr"] = classmethod(_make_collector(a["collector"]))
         if "effects" in a:

@@ -8,6 +8,10 @@ chain = "ETH"
 block = 11129474
 max_synthesis_len = 4
 
+# Collectors derived from each action's tokens_out (gain), emitted through the harness's
+# Collect helper. These are plain swaps/deposits, so no per-action collector is needed.
+use_collect_helper = true
+
 # Profit = sum over these of (final - initial) * price, in profitSummary() output order.
 profit_tokens = ["USDT", "USDC"]
 

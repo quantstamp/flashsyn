@@ -7,6 +7,7 @@ import {DSTest} from "ds-test/test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
+import {Collect} from "mylib/Collect.sol";
 
 
 
@@ -59,28 +60,6 @@ struct LiquidationOpportunity {
     uint256 baseDiscount;
     uint256 discount;
     uint256 conversionRate;
-}
-
-// Data-collection helper (prototype): actions record named balance changes with
-// collect.balanceChange("<token>", rawDelta); the engine appends collect.flush(),
-// which reverts "FlashSyn: <token>=<val> ..." for the collector parser. Deltas are
-// pre-scaled to whole tokens by the generated collector, so values are integers.
-contract Collect {
-    string private buf;
-
-    function balanceChange(string memory name, uint value) external {
-        if (bytes(buf).length != 0) {
-            buf = Strings.append(buf, " ");
-        }
-        buf = Strings.append(string(abi.encodePacked(buf, name, "=")), value);
-    }
-
-    function flush() external {
-        if (bytes(buf).length == 0) {
-            revert(Strings.append("FlashSyn: ", uint(0)));
-        }
-        revert(Strings.append("FlashSyn: ", buf));
-    }
 }
 
 contract euler is DSTest, stdCheats {

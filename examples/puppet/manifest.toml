@@ -9,6 +9,11 @@ chain = "ETH"
 block = 16818064
 max_synthesis_len = 3
 
+# Collectors are derived from effects and emitted through the harness's Collect helper
+# (see attack.t.sol). The two swaps derive automatically; PoolBorrow records its measured
+# value inline (collect.balanceChange in its solidity) — see below.
+use_collect_helper = true
+
 # Profit = (final - initial) * price over these, in profitSummary() output order.
 profit_tokens = ["DVT", "ETH"]
 
@@ -22,28 +27,23 @@ ETH = 25
 ETH = 1000.0
 DVT = 1.0
 
-# token -> [contract variable in the harness, decimals]. Only DVT has an ERC20
-# balanceOf; ETH is native, so ETH-out actions carry a raw `collector` below.
+# token -> [contract variable in the harness, decimals]. A third element "native" means
+# the token has no ERC20 balanceOf, so the derived collector reads address(attacker).balance.
 [token_info]
 DVT = ["dvt", 18]
+ETH = ["", 18, "native"]
 
-# Dump DVT into the tiny Uniswap V1 exchange — this is what crashes the oracle.
-# Output is native ETH (no balanceOf), so the collector is written out.
+# Dump DVT into the tiny Uniswap V1 exchange — this is what crashes the oracle. Output is
+# native ETH; the derived collector measures address(attacker).balance (the native flag).
 [[actions]]
 name = "SwapUniswapDVT2ETH"
 tokens_in = ["DVT"]
 tokens_out = ["ETH"]
 range = [0, 1000]                          # can't sell more DVT than the attacker holds
 solidity = "uniswapExchange.tokenToEthSwapInput($$ * 1e18, 1, 0xffffffff);"
-collector = """
-        // Collect: SwapUniswapDVT2ETH
-        uint _eth0 = address(attacker).balance;
-        uniswapExchange.tokenToEthSwapInput($$ * 1e18, 1, 0xffffffff);
-        revert(Strings.append("FlashSyn: ", (address(attacker).balance - _eth0) / 1e18));
-"""
 
-# Buy DVT back with ETH (the reverse leg). Output is the DVT ERC20, so the default
-# balanceOf collector and the default transit (ETH -= param, DVT += approx) both apply.
+# Buy DVT back with ETH (the reverse leg). Output is the DVT ERC20, so the derived collector
+# (DVT gain via balanceOf) and the default transit (ETH -= param, DVT += approx) both apply.
 [[actions]]
 name = "SwapUniswapETH2DVT"
 tokens_in = ["ETH"]
@@ -52,8 +52,9 @@ range = [0, 25]
 solidity = "uniswapExchange.ethToTokenSwapInput{value: $$ * 1e18}(1, 0xffffffff);"
 
 # Borrow DVT from the pool. Inverts the default model: the search parameter is the DVT
-# RECEIVED, while the ETH collateral is a function of the manipulated oracle and so must
-# be APPROXIMATED (and measured input-side) — hence both escape-hatch fields.
+# RECEIVED, while the ETH collateral is a function of the manipulated oracle. That collateral
+# is the internal value _dep — not a start-to-end balance delta — so the action records it
+# inline with collect.balanceChange (Mode B); the engine just appends collect.flush().
 [[actions]]
 name = "PoolBorrow"
 tokens_in = ["ETH"]                        # collateral paid (approximated), not the param
@@ -62,15 +63,9 @@ range = [0, 100000]                        # up to the pool's whole 100k DVT res
 solidity = """
         _amt = $$ * 1e18;
         _dep = puppetPool.calculateDepositRequired(_amt);
-        puppetPool.borrow{value: _dep}(_amt);"""
-collector = """
-        // Collect: PoolBorrow — measure the ETH collateral spent (the approximated quantity)
-        _amt = $$ * 1e18;
-        _dep = puppetPool.calculateDepositRequired(_amt);
         puppetPool.borrow{value: _dep}(_amt);
-        revert(Strings.append("FlashSyn: ", _dep / 1e18));
-"""
+        collect.balanceChange("ETH", _dep / 1e18);"""
 effects = [
   { token = "DVT", op = "add", src = "param0" },   # received == the parameter
-  { token = "ETH", op = "sub", src = "approx0" },   # collateral == the approximation
+  { token = "ETH", op = "sub", src = "approx0" },   # collateral == the recorded _dep
 ]
