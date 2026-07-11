@@ -14,20 +14,20 @@ negligible ETH deposit.
 
 The exploit FlashSyn should rediscover: **`SwapUniswapDVT2ETH` → `PoolBorrow`**.
 
-## Why this is a Python model, not a `manifest.toml`
+## The manifest's escape-hatch fields
 
-Two of the three actions are ordinary swaps that fit the manifest model, but **`borrow`
-inverts it**. The manifest assumes the consumed `tokens_in` amount is the search
-parameter and the produced `tokens_out` amount is the approximation. For `borrow` it is
-reversed: you *choose* the DVT amount to borrow (the parameter, received as `tokens_out`)
-and *pay* an ETH collateral that is an approximated function of the manipulated oracle
-(consumed `tokens_in`). That can't be expressed declaratively, so `PoolBorrow` overrides
-`transit()` and `collectorStr()` — the same escape hatch Euler uses. See
-`../../examples/template/README.md` ("When you need Python instead").
+Two of the three actions are ordinary swaps, but **`borrow` inverts the default model**.
+The default assumes the consumed `tokens_in` amount is the search parameter and the
+produced `tokens_out` amount is the approximation. For `borrow` it is reversed: you
+*choose* the DVT amount to borrow (the parameter, received as `tokens_out`) and *pay* an
+ETH collateral that is an approximated function of the manipulated oracle (consumed
+`tokens_in`). So `PoolBorrow` sets the manifest's two optional per-action fields — a raw
+`collector` (measures the ETH spent) and an `effects` list that inverts the transit
+(`DVT add param0`, `ETH sub approx0`). Euler's `mint` is the same shape.
 
-The two swaps keep `ActionPro`'s default `transit()`; they override only `collectorStr()`
-because they move **native ETH**, which has no `balanceOf()` for the default collector to
-read.
+`SwapUniswapDVT2ETH` sets only `collector`, because its output is **native ETH** (no
+`balanceOf()` for the derived collector to read); `SwapUniswapETH2DVT` needs neither field
+— its DVT output and consume-then-produce transit are the defaults.
 
 ## Files
 
@@ -35,7 +35,8 @@ read.
   and deploys a Uniswap V1 exchange from vendored Vyper bytecode
   (`src/foundryModule/src/build-uniswap/v1/*.json`) via `deployCode`. `profitSummary()`
   prints DVT then ETH.
-- `PuppetActions.py` — the three actions + `flashsyn_setup()`.
+- `manifest.toml` — the three actions as data (`PoolBorrow` and `SwapUniswapDVT2ETH` use
+  the `collector`/`effects` fields; `SwapUniswapETH2DVT` is pure defaults).
 
 ## Run (from the repo root)
 

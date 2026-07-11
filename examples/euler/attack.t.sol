@@ -61,8 +61,31 @@ struct LiquidationOpportunity {
     uint256 conversionRate;
 }
 
+// Data-collection helper (prototype): actions record named balance changes with
+// collect.balanceChange("<token>", rawDelta); the engine appends collect.flush(),
+// which reverts "FlashSyn: <token>=<val> ..." for the collector parser. Deltas are
+// pre-scaled to whole tokens by the generated collector, so values are integers.
+contract Collect {
+    string private buf;
+
+    function balanceChange(string memory name, uint value) external {
+        if (bytes(buf).length != 0) {
+            buf = Strings.append(buf, " ");
+        }
+        buf = Strings.append(string(abi.encodePacked(buf, name, "=")), value);
+    }
+
+    function flush() external {
+        if (bytes(buf).length == 0) {
+            revert(Strings.append("FlashSyn: ", uint(0)));
+        }
+        revert(Strings.append("FlashSyn: ", buf));
+    }
+}
+
 contract euler is DSTest, stdCheats {
     Vm internal constant vm = Vm(HEVM_ADDRESS);
+    Collect internal collect;
     address payable constant attacker = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker"))))));
     address payable constant attacker2 = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker2"))))));
     IUSDC internal constant USDC = IUSDC(address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48));
@@ -76,6 +99,7 @@ contract euler is DSTest, stdCheats {
     LiquidationOpportunity temp;
     
     function setUp() public {
+        collect = new Collect();
         vm.label(attacker, "Attacker");
         address MasterMinter = USDC.masterMinter();
         vm.startPrank(MasterMinter);

@@ -92,9 +92,22 @@ tokens_out = ["TOKENA"]
 range = [0, 60000000]
 solidity = "VAULT.withdraw($$);"
 
-# ESCAPE HATCH: if an action's fund movement doesn't fit "the $$ params are the consumed
-# amounts and the outputs go to tokens_out" (e.g. a liquidation that zeroes several
-# balances, like the Euler example), you can't express its transit in the manifest.
-# Delete this manifest and write a Python model instead (see src/FlashSynProActions/
-# template.py) that overrides transit() (and collectorStr() if needed) for that action.
-# The flashsyn CLI auto-detects which style the example uses.
+# ESCAPE HATCH: when an action's fund movement doesn't fit "the $$ params are the consumed
+# amounts and the outputs go to tokens_out", two optional per-action fields cover it — no
+# Python needed. See examples/puppet and examples/euler for real uses.
+#
+#   [[actions]]
+#   name = "PoolBorrow"
+#   tokens_in  = ["ETH"]      # flow only (for the search graph)
+#   tokens_out = ["DVT"]
+#   range = [0, 100000]
+#   solidity = "..."
+#   # collector: raw Solidity used verbatim, replacing the derived balanceOf collector
+#   # (native ETH, an input-side amount, custom decimals).
+#   collector = """...revert(Strings.append("FlashSyn: ", _dep / 1e18));"""
+#   # effects: declarative transit, replacing the default. op = add|sub|set,
+#   # src = paramN (the Nth $$) | approxN (the Nth collector output) | 0.
+#   effects = [
+#     { token = "DVT", op = "add", src = "param0" },   # received == the parameter
+#     { token = "ETH", op = "sub", src = "approx0" },  # collateral == the approximation
+#   ]

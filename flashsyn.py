@@ -7,8 +7,8 @@ Usage (from the repo root):
     python3 flashsyn.py collect    <example> [--fast-using-anvil]
     python3 flashsyn.py synthesize <example> [--fast-using-anvil] [--jobs N]
 
-<example> is a directory under examples/ (e.g. harvest_usdt). It must hold exactly
-one <Name>Actions.py exposing flashsyn_setup() and one attack.t.sol. The CLI places
+<example> is a directory under examples/ (e.g. harvest_usdt). It must hold a
+manifest.toml (the declarative action model) and one attack.t.sol. The CLI places
 the harness where forge expects it and drives collect-vs-synthesize by subcommand,
 replacing the old "cp two files, then comment-toggle main()" flow.
 
@@ -29,7 +29,6 @@ faster on the Euler collect (248s -> 72s, identical data). Needs `anvil` on PATH
 with Foundry) and the chain's real endpoint to fork from (an env override such as
 `ETH=<rpc>` wins, else run.sh's baked-in default).
 """
-import importlib.util
 import os
 import re
 import subprocess
@@ -51,9 +50,9 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 def _load_example(name):
     """Place the example's harness where forge expects it; return its setup dict.
 
-    An example is either declarative (a manifest.toml) or a Python action model
-    (one *Actions.py exposing flashsyn_setup()). Either way the Solidity harness
-    (attack.t.sol) is copied to where forge and the collector generator look.
+    Every example is declarative: a manifest.toml (the action model) plus its
+    Solidity harness attack.t.sol (setUp / interfaces / profitSummary), which is
+    copied to where forge and the collector generator look.
     """
     exdir = os.path.join(ROOT, "examples", name)
     if not os.path.isdir(exdir):
@@ -66,25 +65,10 @@ def _load_example(name):
         dst.write(src.read())
 
     manifest = os.path.join(exdir, "manifest.toml")
-    if os.path.isfile(manifest):
-        import manifest as manifest_loader
-        return manifest_loader.load(manifest)
-
-    models = [f for f in os.listdir(exdir) if f.endswith("Actions.py")]
-    if len(models) != 1:
-        sys.exit("examples/{}: need a manifest.toml or exactly one *Actions.py, found {}".format(name, models))
-    spec = importlib.util.spec_from_file_location("flashsyn_example", os.path.join(exdir, models[0]))
-    mod = importlib.util.module_from_spec(spec)
-    # Register in sys.modules BEFORE exec so the module is importable by name. The
-    # example's action classes get __module__ == "flashsyn_example"; --jobs > 1 pickles
-    # them to the worker/manager processes, which re-import that module to unpickle —
-    # forked children inherit this sys.modules entry, so without it they fail with
-    # "Can't pickle <class 'flashsyn_example...'>: import of module failed".
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    if not hasattr(mod, "flashsyn_setup"):
-        sys.exit("examples/{}/{} does not define flashsyn_setup()".format(name, models[0]))
-    return mod.flashsyn_setup()
+    if not os.path.isfile(manifest):
+        sys.exit("missing examples/{}/manifest.toml".format(name))
+    import manifest as manifest_loader
+    return manifest_loader.load(manifest)
 
 
 def _rpc_for_chain(chain):

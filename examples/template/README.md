@@ -24,8 +24,8 @@ examples/<your-name>/
 **Automated for you** (used to be hand-written Python):
 
 - `numInputs` — counted from the `$$` in each action's `solidity`.
-- the **data collector** — generated from `tokens_out` + `token_info`.
-- the **balance transition** (`transit`) — generated from `tokens_in`/`tokens_out`.
+- the **data collector** — generated from `tokens_out` + `token_info` (override with `collector`).
+- the **balance transition** (`transit`) — generated from `tokens_in`/`tokens_out` (override with `effects`).
 - `calcProfit` — derived from `profit_tokens` + balances + prices.
 - the **action dependency graph** — all-others default (refine with `deps`).
 - no file copying, no source editing to switch collection vs. synthesis.
@@ -58,17 +58,29 @@ An action's `solidity` is embedded verbatim, so it can be **one call or many**.
 - **Whatever the snippet references must be declared in the harness** — temp vars, a
   second account, structs, extra interfaces.
 
-## When you need Python instead
+## Two escape-hatch fields (still TOML)
 
-The derived `transit()` assumes the `$$` params are the consumed `tokens_in` amounts and
-`simulate()`'s outputs go to `tokens_out`. If an action moves funds differently — e.g. it
-zeroes several balances rather than decrementing them (Euler's self-liquidation) — the
-manifest can't express it. Then drop the manifest and write a Python model
-(`src/FlashSynProActions/template.py`) overriding `transit()` (and `collectorStr()` if
-needed) for that one action. The CLI auto-detects manifest vs. Python.
+The derived collector assumes each `tokens_out` is measured by a `balanceOf` delta, and the
+derived `transit()` assumes the `$$` params are the consumed `tokens_in` amounts and
+`simulate()`'s outputs go to `tokens_out`. When an action breaks those assumptions, two
+**optional** per-action fields cover it without leaving the manifest:
+
+- **`collector`** — raw Solidity used verbatim as the data collector (replaces the derived
+  one). For outputs a `balanceOf` delta can't read: native ETH, an input-side amount, custom
+  decimals.
+- **`effects`** — a declarative balance transition (replaces `transit`), a list of
+  `{token, op, src}` where `op` is `add | sub | set` and `src` is `paramN` (the Nth `$$`),
+  `approxN` (the Nth collector output), or `0`. For actions that invert
+  parameter/approximation (borrow, mint), zero a balance (a liquidation → `op = set, src = 0`),
+  or have no measured output (donate, burn).
+
+`tokens_in`/`tokens_out` always describe token *flow* for the search graph, independent of
+`effects`.
 
 ## Worked examples
 
 - `examples/harvest_usdt/`, `examples/harvest_usdc/` — manifest-only, verified end-to-end.
-- `examples/euler/` — a full Python model (the escape-hatch reference; its liquidation
-  action overrides `transit`).
+- `examples/puppet/` — `collector` + inverted `effects` on `borrow`; `collector`-only on a
+  native-ETH swap; the reverse swap is pure defaults.
+- `examples/euler/` — the escape-hatch reference: `effects` with `op = set` (self-liquidation
+  zeroes balances), inverted `mint`, and no-output `donate`/`burn`.

