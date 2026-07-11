@@ -9,10 +9,6 @@ chain = "ETH"
 block = 16818064
 max_synthesis_len = 6
 
-# Prototype: derive every collector from `effects` and emit it through the harness's
-# Collect helper (collect.balanceChange), instead of a hand-written `collector` field.
-# See attack.t.sol's Collect contract. Decimals come from token_info below.
-use_collect_helper = true
 
 # Profit = (final - initial) * price over these, in profitSummary() output order.
 profit_tokens = ["USDC"]

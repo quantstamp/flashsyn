@@ -27,32 +27,32 @@ Schema (see examples/harvest_usdt/manifest.toml):
     range = [0, 20000000]
     solidity = "CURVE.exchange_underlying(2, 1, $$ * 1e6, 0);"   # numInputs = count of $$
 
-Two optional per-action fields cover the actions a fixed swap/deposit model can't
-express — the cases that used to force a Python action model (see examples/puppet):
+Collectors are always DERIVED and emitted through the harness's Collect helper
+(src/foundryModule/lib/mylib/Collect.sol, deployed as `collect` in setUp): the action
+records named balance changes with collect.balanceChange("<tok>", wholeTokenValue) and
+the engine appends collect.flush(), which reverts "FlashSyn: <tok>=<val> ..." for the
+parser. There is no `collector` field. Two things shape an action:
 
-    collector = '''...revert(...);'''   # raw Solidity, verbatim, REPLACES the derived
-                                        # balanceOf collector. Needed when the measured
-                                        # output isn't an attacker balanceOf delta:
-                                        # native ETH, an input-side amount, /1e18 quirks.
-
-    effects = [                         # REPLACES the default transit (consume tokens_in
-      {token="DVT", op="add", src="param0"},   # params, produce approximated tokens_out).
-      {token="ETH", op="sub", src="approx0"},  # Needed when the search parameter is a
-    ]                                          # received amount and a paid amount is the
+    effects = [                         # optional; REPLACES the default transit (consume
+      {token="DVT", op="add", src="param0"},   # tokens_in params, produce approximated
+      {token="ETH", op="sub", src="approx0"},  # tokens_out). Needed when the parameter is
+    ]                                          # a received amount and a paid amount is the
                                                # approximation (borrow/mint), when an action
                                                # zeroes a balance, or has no measured output.
         # op    : add | sub | set
-        # src   : paramN (the Nth $$, 0-based) | approxN (the Nth collector output) | 0
+        # src   : paramN (the Nth $$, 0-based) | approxN (the Nth measured value) | 0
 
-tokens_in / tokens_out always describe token FLOW for the search graph, independent of
-these; annotate them by direction even when effects invert the magnitude bookkeeping.
-Omit both fields and the common case keeps zero boilerplate.
+`effects` also DRIVES the derived collector (Mode A): each approxN token is measured as a
+balance delta (op=add -> after-before / gain, op=sub -> before-after / spend) in approxN
+order, scaled by token_info decimals. With no effects, the default measures each tokens_out
+as a gain. token_info's optional 3rd element "native" -> read address(attacker).balance.
 
-Prototype (opt-in, top-level `use_collect_helper = true`; see examples/euler): instead of
-a `collector` field, DERIVE every collector from `effects` and emit it through a `Collect`
-helper contract in the harness (collect.balanceChange(name, wholeTokenDelta) + flush). Each
-approxN effect is measured as a balance delta (op=add -> after-before, op=sub -> before-after)
-in approxN order, scaled by token_info decimals. Off by default -> other examples unchanged.
+Mode B — when the measured value is an INTERNAL quantity (not a start-to-end balance delta,
+e.g. borrow's collateral _dep), the action records it inline in `solidity` with a
+collect.balanceChange("<tok>", value) call; the engine then only appends collect.flush().
+
+tokens_in / tokens_out always describe token FLOW for the search graph, independent of the
+above; annotate them by direction even when effects invert the magnitude bookkeeping.
 """
 import tomllib
 
@@ -77,13 +77,6 @@ def _make_action_str(name, solidity):
     def actionStr(cls, _body=body):
         return _body
     return actionStr
-
-
-def _make_collector(raw):
-    """Raw Solidity used verbatim as the collector — overrides the derived one."""
-    def collectorStr(cls, _raw=raw):
-        return _raw
-    return collectorStr
 
 
 def _make_transit(num_inputs, effects):
@@ -190,15 +183,15 @@ def load(manifest_path):
         "calcProfit": staticmethod(_make_calc_profit(m["profit_tokens"], initial, prices)),
     })
 
-    # Opt-in prototype: derive every collector from the action's effects and emit it
-    # through the harness's Collect helper (collect.balanceChange), instead of a raw
-    # `collector` field. See examples/euler. Off by default -> harvest/puppet unchanged.
-    use_collect = m.get("use_collect_helper", False)
-
     actions = []
     for a in m["actions"]:
         solidity = a["solidity"]
         num_inputs = solidity.count("$$")
+        if "collector" in a:
+            raise ValueError("action {}: the 'collector' field was removed. Rely on the "
+                             "derived collector (from effects/tokens_out), or record an "
+                             "internal value inline with collect.balanceChange(...) in "
+                             "solidity.".format(a["name"]))
         attrs = {
             "approximators": NumericalApproximatorsPro(),
             "numInputs": num_inputs,
@@ -207,17 +200,10 @@ def load(manifest_path):
             "range": list(a["range"]),
             "actionStr": classmethod(_make_action_str(a["name"], solidity)),
         }
-        if use_collect:
-            if "collector" in a:
-                raise ValueError("action {}: 'collector' is not used with use_collect_helper "
-                                 "(the collector is derived from effects, or write "
-                                 "collect.balanceChange(...) inline in solidity)".format(a["name"]))
-            if "collect.balanceChange" in solidity:
-                attrs["collectorStr"] = classmethod(_make_inline_collector())          # Mode B: author records inline
-            else:
-                attrs["collectorStr"] = classmethod(_make_collect_collector(_measures_for(a), token_info))  # Mode A: derived
-        elif "collector" in a:
-            attrs["collectorStr"] = classmethod(_make_collector(a["collector"]))
+        if "collect.balanceChange" in solidity:
+            attrs["collectorStr"] = classmethod(_make_inline_collector())              # Mode B: author records inline
+        else:
+            attrs["collectorStr"] = classmethod(_make_collect_collector(_measures_for(a), token_info))  # Mode A: derived
         if "effects" in a:
             attrs["transit"] = classmethod(_make_transit(num_inputs, a["effects"]))
         actions.append(type(a["name"], (wrapper,), attrs))

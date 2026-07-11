@@ -9,10 +9,6 @@ chain = "ETH"
 block = 16818064
 max_synthesis_len = 3
 
-# Collectors are derived from effects and emitted through the harness's Collect helper
-# (see attack.t.sol). The two swaps derive automatically; PoolBorrow records its measured
-# value inline (collect.balanceChange in its solidity) — see below.
-use_collect_helper = true
 
 # Profit = (final - initial) * price over these, in profitSummary() output order.
 profit_tokens = ["DVT", "ETH"]

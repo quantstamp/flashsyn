@@ -14,29 +14,31 @@ negligible ETH deposit.
 
 The exploit FlashSyn should rediscover: **`SwapUniswapDVT2ETH` → `PoolBorrow`**.
 
-## The manifest's escape-hatch fields
+## Both collector mechanisms in one example
 
 Two of the three actions are ordinary swaps, but **`borrow` inverts the default model**.
 The default assumes the consumed `tokens_in` amount is the search parameter and the
 produced `tokens_out` amount is the approximation. For `borrow` it is reversed: you
 *choose* the DVT amount to borrow (the parameter, received as `tokens_out`) and *pay* an
 ETH collateral that is an approximated function of the manipulated oracle (consumed
-`tokens_in`). So `PoolBorrow` sets the manifest's two optional per-action fields — a raw
-`collector` (measures the ETH spent) and an `effects` list that inverts the transit
-(`DVT add param0`, `ETH sub approx0`). Euler's `mint` is the same shape.
+`tokens_in`). That collateral is the internal value `_dep`, not a start-to-end balance
+delta, so `PoolBorrow` records it **inline** in its `solidity`
+(`collect.balanceChange("ETH", _dep / 1e18)`) and gives an `effects` list that inverts the
+transit (`DVT add param0`, `ETH sub approx0`).
 
-`SwapUniswapDVT2ETH` sets only `collector`, because its output is **native ETH** (no
-`balanceOf()` for the derived collector to read); `SwapUniswapETH2DVT` needs neither field
-— its DVT output and consume-then-produce transit are the defaults.
+The swaps are auto-derived: `SwapUniswapDVT2ETH` measures **native ETH** (via the
+`token_info` `"native"` flag → `address(attacker).balance`), and `SwapUniswapETH2DVT`
+measures its DVT output through `balanceOf`. So this one example shows every path: derived
+ERC20, derived native, and the inline internal-value override.
 
 ## Files
 
 - `attack.t.sol` — harness. Inlines the DVD contracts (`DamnValuableToken`, `PuppetPool`)
   and deploys a Uniswap V1 exchange from vendored Vyper bytecode
-  (`src/foundryModule/src/build-uniswap/v1/*.json`) via `deployCode`. `profitSummary()`
-  prints DVT then ETH.
-- `manifest.toml` — the three actions as data (`PoolBorrow` and `SwapUniswapDVT2ETH` use
-  the `collector`/`effects` fields; `SwapUniswapETH2DVT` is pure defaults).
+  (`src/foundryModule/src/build-uniswap/v1/*.json`) via `deployCode`. Imports the shared
+  `Collect` helper and deploys it in `setUp()`. `profitSummary()` prints DVT then ETH.
+- `manifest.toml` — the three actions as data (`PoolBorrow` records its measurement inline
+  and inverts transit via `effects`; both swaps are auto-derived).
 
 ## Run (from the repo root)
 

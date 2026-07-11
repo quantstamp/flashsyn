@@ -41,20 +41,23 @@ starting point — and fill in its two files:
    `range`, and the Solidity call). The engine builds the action model from it — `numInputs`, the data
    collector, the balance `transit()`, `calcProfit`, and the dependency graph are all derived.
 
-Every example is a manifest — there is no separate Python action-model format. For an action whose
-fund movement doesn't fit the default (a swap/deposit whose consumed `tokens_in` is the search
-parameter and produced `tokens_out` is measured by a `balanceOf` delta), two **optional** per-action
-fields cover the rest without leaving TOML:
+Every example is a manifest — there is no separate Python action-model format. Data collectors are
+generated and emitted through a shared `Collect` helper deployed in the harness
+(`src/foundryModule/lib/mylib/Collect.sol`): the collector measures each output as a balance delta
+and records it with `collect.balanceChange("<tok>", value)`, then the engine appends
+`collect.flush()`. Two things shape an action that doesn't fit the plain swap/deposit default:
 
-- **`collector`** — raw Solidity used verbatim as the data collector, replacing the derived one. For
-  outputs a `balanceOf` delta can't measure: native ETH, an input-side amount, custom decimals.
 - **`effects`** — a declarative balance transition (`[{token, op = add|sub|set, src = paramN|approxN|0}]`),
-  replacing the default `transit()`. For actions that invert parameter/approximation (borrow, mint),
-  zero a balance (a liquidation), or have no measured output (donate, burn).
+  replacing the default `transit()`, for actions that invert parameter/approximation (borrow, mint),
+  zero a balance (a liquidation), or have no measured output (donate, burn). `effects` also drives what
+  the derived collector measures (each `approxN` token; `add`→gain, `sub`→spend).
+- **inline measurement** — when the measured quantity is an *internal* value rather than a start-to-end
+  balance delta (e.g. borrow's collateral `_dep`), the action records it directly in its `solidity` with
+  a `collect.balanceChange("<tok>", value)` call; the engine just adds the `flush()`.
 
-`tokens_in/out` always describe token *flow* for the search graph, independent of these. See the
-Puppet and Euler manifests for both fields in use; `examples/template/README.md` walks through the
-whole flow, `$$` semantics, and multi-call actions.
+`token_info`'s optional 3rd element `"native"` makes the collector read `address(attacker).balance`
+(for native ETH). `tokens_in/out` always describe token *flow* for the search graph, independent of the
+above. See the Puppet manifest (both mechanisms) and `examples/template/README.md` for the full flow.
 
 ## Run procedure
 
@@ -92,9 +95,9 @@ across `--rm` runs, compounding the win.
 
 ## Worked examples
 
-The **Euler Finance** exploit (March 2023) is the reference example for the manifest's escape-hatch
-fields — its self-liquidation zeroes several balances at once (`effects` with `op = set`) and its
-`mint` inverts parameter/approximation, none of which the default `transit` expresses. It runs
+The **Euler Finance** exploit (March 2023) is the reference example for `effects` — its
+self-liquidation zeroes several balances at once (`op = set`) and its `mint` inverts
+parameter/approximation, none of which the default `transit` expresses. It runs
 through the CLI like the others (`python3 flashsyn.py collect euler` then
 `python3 flashsyn.py synthesize euler`); FlashSyn rediscovers the exploit —
 `eulerDeposit → eulerMint → eulerDonate → eulerLiquidateWithdraw`, **Best Profit 29,185,439**,
@@ -112,10 +115,10 @@ copying. Both are verified end-to-end (FlashSyn rediscovers each exploit).
 A **Damn Vulnerable DeFi** example lives in [`examples/puppet/`](examples/puppet/README.md):
 the "Puppet" challenge, whose lending pool prices DVT off a Uniswap V1 spot oracle. Unlike
 the mainnet examples it **deploys the whole scenario locally in `setUp()`** (DVT + a Uniswap
-V1 exchange via `deployCode` + the pool), so the fork block is arbitrary. Its `borrow` action uses
-the manifest's escape-hatch fields (`collector` + inverted `effects`), because the ETH collateral is
-an approximated function of the manipulated price, not the search parameter — see the example's
-README. The two Uniswap V1 Vyper build artifacts it deploys
+V1 exchange via `deployCode` + the pool), so the fork block is arbitrary. Its `borrow` action records
+its collateral inline (`collect.balanceChange("ETH", _dep / 1e18)`) with inverted `effects`, because
+the ETH collateral is an approximated function of the manipulated price, not the search parameter —
+see the example's README. The two Uniswap V1 Vyper build artifacts it deploys
 are vendored under `src/foundryModule/src/build-uniswap/v1/`. Run with
 `python3 flashsyn.py collect puppet` then `python3 flashsyn.py synthesize puppet`.
 Verified end-to-end (block 16818064): FlashSyn rediscovers the exploit — vector

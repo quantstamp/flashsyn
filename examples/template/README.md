@@ -24,7 +24,7 @@ examples/<your-name>/
 **Automated for you** (used to be hand-written Python):
 
 - `numInputs` — counted from the `$$` in each action's `solidity`.
-- the **data collector** — generated from `tokens_out` + `token_info` (override with `collector`).
+- the **data collector** — generated from `tokens_out`/`effects` + `token_info`, emitted through the harness's `Collect` helper.
 - the **balance transition** (`transit`) — generated from `tokens_in`/`tokens_out` (override with `effects`).
 - `calcProfit` — derived from `profit_tokens` + balances + prices.
 - the **action dependency graph** — all-others default (refine with `deps`).
@@ -58,29 +58,32 @@ An action's `solidity` is embedded verbatim, so it can be **one call or many**.
 - **Whatever the snippet references must be declared in the harness** — temp vars, a
   second account, structs, extra interfaces.
 
-## Two escape-hatch fields (still TOML)
+## When the default doesn't fit
 
-The derived collector assumes each `tokens_out` is measured by a `balanceOf` delta, and the
-derived `transit()` assumes the `$$` params are the consumed `tokens_in` amounts and
-`simulate()`'s outputs go to `tokens_out`. When an action breaks those assumptions, two
-**optional** per-action fields cover it without leaving the manifest:
+Collectors are always emitted through the harness's `Collect` helper (deployed in `setUp`).
+The default measures each `tokens_out` as a gain and the default `transit()` assumes the `$$`
+params are the consumed `tokens_in` amounts and `simulate()`'s outputs go to `tokens_out`.
+When an action breaks those assumptions:
 
-- **`collector`** — raw Solidity used verbatim as the data collector (replaces the derived
-  one). For outputs a `balanceOf` delta can't read: native ETH, an input-side amount, custom
-  decimals.
 - **`effects`** — a declarative balance transition (replaces `transit`), a list of
   `{token, op, src}` where `op` is `add | sub | set` and `src` is `paramN` (the Nth `$$`),
-  `approxN` (the Nth collector output), or `0`. For actions that invert
-  parameter/approximation (borrow, mint), zero a balance (a liquidation → `op = set, src = 0`),
-  or have no measured output (donate, burn).
+  `approxN` (the Nth measured value), or `0`. For actions that invert parameter/approximation
+  (borrow, mint), zero a balance (a liquidation → `op = set, src = 0`), or have no measured
+  output (donate, burn). `effects` also drives what the derived collector measures (each
+  `approxN` token; `add`→gain, `sub`→spend).
+- **inline measurement** — when the measured quantity is an *internal* value (not a
+  start-to-end balance delta, e.g. borrow's collateral `_dep`), record it in `solidity` with
+  `collect.balanceChange("<tok>", value)`; the engine just appends `collect.flush()`.
+- **native tokens** — a `token_info` entry `["", 18, "native"]` makes the collector read
+  `address(attacker).balance` instead of `balanceOf`.
 
 `tokens_in`/`tokens_out` always describe token *flow* for the search graph, independent of
 `effects`.
 
 ## Worked examples
 
-- `examples/harvest_usdt/`, `examples/harvest_usdc/` — manifest-only, verified end-to-end.
-- `examples/puppet/` — `collector` + inverted `effects` on `borrow`; `collector`-only on a
-  native-ETH swap; the reverse swap is pure defaults.
-- `examples/euler/` — the escape-hatch reference: `effects` with `op = set` (self-liquidation
+- `examples/harvest_usdt/`, `examples/harvest_usdc/` — plain swaps/deposits, all auto-derived.
+- `examples/puppet/` — every path: inverted `effects` + inline measurement on `borrow`; a
+  derived native-ETH swap; a derived ERC20 swap.
+- `examples/euler/` — the `effects` reference: `op = set` (self-liquidation
   zeroes balances), inverted `mint`, and no-output `donate`/`burn`.

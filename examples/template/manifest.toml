@@ -16,10 +16,6 @@ chain = "ETH"              # ETH | BSC | Fantom | Polygon  (endpoints in src/fou
 block = 12345678           # fork block, just before the exploit
 max_synthesis_len = 5      # longest action sequence the synthesizer searches
 
-# Collectors are derived from each action's tokens_out/effects and emitted through the
-# harness's Collect helper (deployed in setUp). A plain action needs nothing extra; an
-# action measuring an internal value records it inline (see PoolBorrow in examples/puppet).
-use_collect_helper = true
 
 # Which tokens count toward profit, in the SAME ORDER your profitSummary() prints them.
 # profit = sum over these of (final_balance - initial_balance) * price.  (auto-derived)

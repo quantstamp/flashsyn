@@ -176,30 +176,8 @@ class ActionPro():
     def simulate(cls, inputs, actionList):
         return cls.approximators(inputs, actionList)
 
-    @classmethod
-    def collectorStr(cls):
-        """Default data collector: measure each output token's balance delta.
-
-        Wraps actionStr() between balance reads and reverts with the deltas after
-        the FlashSyn marker — so a plain swap/deposit/withdraw action only writes
-        actionStr(). Derived from tokensOut + tokenInfo. Override for an action
-        whose measurable output isn't a simple attacker-balance delta.
-        """
-        if not cls.tokensOut:
-            raise NotImplementedError(
-                "{}: default collectorStr needs tokensOut; give the action its own "
-                "collectorStr()".format(cls.__name__))
-        reads = ""
-        revert = None
-        for i, tok in enumerate(cls.tokensOut):
-            var, dec = cls.tokenInfo[tok]
-            reads += "        uint _fsOut{} = {}.balanceOf(address(attacker));\n".format(i, var)
-            delta = "({}.balanceOf(address(attacker)) - _fsOut{}) / 1e{}".format(var, i, dec)
-            if revert is None:
-                revert = 'Strings.append("FlashSyn: ", {})'.format(delta)
-            else:
-                revert = "Strings.appendWithSpace({}, {})".format(revert, delta)
-        return "{}{}        revert({});\n".format(reads, cls.actionStr(), revert)
+    # No default collectorStr: manifest.load() sets one on every action (derived from
+    # effects/tokens_out, or Mode-B inline), emitted through the harness Collect helper.
 
     @classmethod
     def transit(cls, inputs, actionList):
