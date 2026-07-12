@@ -97,7 +97,8 @@ solidity = "VAULT.withdraw($$);"
 # outputs go to tokens_out", two things cover it — no Python. See examples/puppet & euler.
 #
 # 1. effects — declarative transit, replacing the default. op = add|sub|set, src = paramN
-#    (the Nth $$) | approxN (the Nth measured value) | 0. Also drives what the collector
+#    (the Nth $$) | approxN (the Nth measured value) | a number constant (e.g. 0, 5). Also
+#    drives what the collector
 #    measures: each approxN token, add -> after-before (gain), sub -> before-after (spend).
 # 2. inline measurement — when the measured quantity is an INTERNAL value (not a start-to-end
 #    balance delta, e.g. borrow's collateral _dep), record it in `solidity` with

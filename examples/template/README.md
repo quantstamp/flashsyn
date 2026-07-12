@@ -68,7 +68,8 @@ When an action breaks those assumptions:
 - **`effects`** — a declarative balance transition (replaces `transit`), a list of
   `{token, op, src}` where `op` is `add | sub | set` and `src` is `paramN` (the Nth `$$`),
   `approxN` (the Nth measured value), or `0`. For actions that invert parameter/approximation
-  (borrow, mint), zero a balance (a liquidation → `op = set, src = 0`), or have no measured
+  (borrow, mint), set a balance to a constant (a liquidation → `op = set, src = 0`; any
+  whole-token number works), or have no measured
   output (donate, burn). `effects` also drives what the derived collector measures (each
   `approxN` token; `add`→gain, `sub`→spend).
 - **inline measurement** — when the measured quantity is an *internal* value (not a

@@ -47,7 +47,7 @@ generated and emitted through a shared `Collect` helper deployed in the harness
 and records it with `collect.balanceChange("<tok>", value)`, then the engine appends
 `collect.flush()`. Two things shape an action that doesn't fit the plain swap/deposit default:
 
-- **`effects`** — a declarative balance transition (`[{token, op = add|sub|set, src = paramN|approxN|0}]`),
+- **`effects`** — a declarative balance transition (`[{token, op = add|sub|set, src = paramN|approxN|<number>}]`),
   replacing the default `transit()`, for actions that invert parameter/approximation (borrow, mint),
   zero a balance (a liquidation), or have no measured output (donate, burn). `effects` also drives what
   the derived collector measures (each `approxN` token; `add`→gain, `sub`→spend).

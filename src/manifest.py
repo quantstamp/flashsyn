@@ -40,7 +40,8 @@ parser. There is no `collector` field. Two things shape an action:
                                                # approximation (borrow/mint), when an action
                                                # zeroes a balance, or has no measured output.
         # op    : add | sub | set
-        # src   : paramN (the Nth $$, 0-based) | approxN (the Nth measured value) | 0
+        # src   : paramN (the Nth $$, 0-based) | approxN (the Nth measured value)
+        #         | a number literal (whole-token constant, e.g. 0, 5, -100; handy with set)
 
 `effects` also DRIVES the derived collector (Mode A): each approxN token is measured as a
 balance delta (op=add -> after-before / gain, op=sub -> before-after / spend) in approxN
@@ -84,23 +85,29 @@ def _make_transit(num_inputs, effects):
 
     Each effect is {token, op, src}. src resolves to: paramN -> the Nth of this
     action's inputs (the last num_inputs of the input vector, matching numInputs);
-    approxN -> the Nth collector output from simulate(); 0 -> the literal 0.
+    approxN -> the Nth collector output from simulate(); or a number literal (a whole-token
+    constant, e.g. 0, 5, -100), useful with op=set to reset a balance to a fixed value.
     """
     def transit(cls, inputs, actionList, _effects=effects, _n=num_inputs):
         params = inputs[-_n:] if _n else []
         outputs = None
         for e in _effects:
             src = e["src"]
-            if src == "0":
-                val = 0
-            elif src.startswith("param"):
+            if isinstance(src, str) and src.startswith("param"):
                 val = params[int(src[len("param"):])]
-            elif src.startswith("approx"):
+            elif isinstance(src, str) and src.startswith("approx"):
                 if outputs is None:
                     outputs = cls.simulate(inputs, actionList)
                 val = outputs[int(src[len("approx"):])]
+            elif isinstance(src, (int, float)):
+                val = src                                       # literal constant (TOML number)
+            elif isinstance(src, str):
+                try:
+                    val = float(src) if "." in src else int(src)   # numeric string, incl. "0"
+                except ValueError:
+                    raise ValueError("bad effect src {!r} (want paramN | approxN | a number)".format(src))
             else:
-                raise ValueError("bad effect src {!r} (want paramN | approxN | 0)".format(src))
+                raise ValueError("bad effect src {!r} (want paramN | approxN | a number)".format(src))
             tok, op = e["token"], e["op"]
             cur = cls.currentBalances.get(tok, 0)
             if op == "add":
