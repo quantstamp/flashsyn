@@ -5,8 +5,8 @@ must agree. Kept here (one source of truth) instead of duplicated as literals so
 they can't silently drift.
 
 If you change a value here you MUST update the Solidity that emits it:
-  - SEPARATOR_TEXT  -> the `emit log("...")` calls in
-        foundryModule/src/test/template.t.sol (and any filled-in attack.t.sol)
+  - SEPARATOR_TEXT  -> the `emit log("...")` calls in each example's attack.t.sol
+        testExample functions (used by the `deps` command)
   - FLASHSYN_MARKER -> the `revert("FlashSyn: ...")` in the Collect helper's flush()
         (foundryModule/lib/mylib/Collect.sol), which every generated collector calls
   - PLACEHOLDER     -> the `$$` markers in an action's actionStr()/collectorStr()
