@@ -60,7 +60,7 @@ solidity = """
         _amt = $$ * 1e18;
         _dep = puppetPool.calculateDepositRequired(_amt);
         puppetPool.borrow{value: _dep}(_amt);
-        collect.balanceChange("ETH", _dep / 1e18);"""
+        collect.balanceChange("ETH", _dep);"""
 effects = [
   { token = "DVT", op = "add", src = "param0" },   # received == the parameter
   { token = "ETH", op = "sub", src = "approx0" },   # collateral == the recorded _dep

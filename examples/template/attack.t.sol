@@ -88,8 +88,8 @@ contract Template is DSTest, stdCheats {
     // The string must contain "FlashSyn"; the integers after it are parsed as balances.
     function profitSummary() public view returns (string memory) {
         return Strings.appendWithSpace(
-            Strings.append("FlashSyn: TOKENA=", TOKENA.balanceOf(address(attacker)) / 1e6),
-            Strings.append("TOKENB=", TOKENB.balanceOf(address(attacker)) / 1e6));
+            Strings.append("FlashSyn: TOKENA=", TOKENA.balanceOf(address(attacker))),
+            Strings.append("TOKENB=", TOKENB.balanceOf(address(attacker))));
     }
 
     // ---- Everything above is the "preamble" the engine reads. Everything below is

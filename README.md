@@ -100,8 +100,8 @@ self-liquidation zeroes several balances at once (`op = set`) and its `mint` inv
 parameter/approximation, none of which the default `transit` expresses. It runs
 through the CLI like the others (`python3 flashsyn.py collect euler` then
 `python3 flashsyn.py synthesize euler`); FlashSyn rediscovers the exploit —
-`eulerDeposit → eulerMint → eulerDonate → eulerLiquidateWithdraw`, **Best Profit 29,185,439**,
-params `[199600000, 1479041079, 423197409]`. See
+`eulerDeposit → eulerMint → eulerDonate → eulerLiquidateWithdraw`, **Best Profit 22,415,806**,
+params `[100585937, 1501953125, 908203125]`. See
 [`examples/euler/README.md`](examples/euler/README.md).
 
 Two more worked examples use the streamlined CLI: the **Harvest Finance** exploits
@@ -160,11 +160,13 @@ for the historical note below:
 **Verification status.** Run end-to-end through the CLI against the Euler example on native arm64 with
 the modern stack (Python 3.12, numpy 2.2 / scipy 1.15 / scikit-learn 1.6, vendored shgo; mainnet archive
 fork at block 16818064, forge 1.7.1): `collect` → `synthesize` and FlashSyn **rediscovers the exploit** —
-sequence `deposit → mint → donate → liquidateWithdraw`, **Best Profit 29,185,439** with parameters
-`[199600000, 1479041079, 423197409]`. (This is a higher-profit parameterization than the historical
-~$22.4M frozen-stack reference; the modern optimizer settles on a different optimum given the data the
-CLI collects. shgo itself is deterministic per data set — this is why the vendored copy is pinned: with
-stock modern scipy shgo the same run yields `0 executions succeed` and never converges.)
+sequence `deposit → mint → donate → liquidateWithdraw`, **Best Profit 22,415,806** with parameters
+`[100585937, 1501953125, 908203125]` — close to the historical ~$22.4M reference. (The pipeline is
+deterministic per data set: three separate runs land on this exact profit. An earlier build that scaled
+token decimals in Solidity — flooring away the fraction on every measurement — found a higher 29,185,439
+parameterization off that quantized data; scaling in Python as a float instead gives the faithful data
+and this optimum. shgo itself is deterministic — this is why the vendored copy is pinned: with stock
+modern scipy shgo the same run yields `0 executions succeed` and never converges.)
 
 > Note: run FlashSyn commands from the **repo root** — `settings.toml` is loaded via a path relative
 > to the working directory.

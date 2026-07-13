@@ -29,9 +29,10 @@ Schema (see examples/harvest_usdt/manifest.toml):
 
 Collectors are always DERIVED and emitted through the harness's Collect helper
 (src/foundryModule/lib/mylib/Collect.sol, deployed as `collect` in setUp): the action
-records named balance changes with collect.balanceChange("<tok>", wholeTokenValue) and
-the engine appends collect.flush(), which reverts "FlashSyn: <tok>=<val> ..." for the
-parser. There is no `collector` field. Two things shape an action:
+records named balance changes with collect.balanceChange("<tok>", rawValue) and the engine
+appends collect.flush(), which reverts "FlashSyn: <tok>=<raw> ..."; the parser maps values to
+positions by name and scales each by token_info decimals (as a float — no rounding in Solidity).
+There is no `collector` field. Two things shape an action:
 
     effects = [                         # optional; REPLACES the default transit (consume
       {token="DVT", op="add", src="param0"},   # tokens_in params, produce approximated
@@ -151,23 +152,22 @@ def _make_inline_collector():
 
 
 def _make_collect_collector(measures, token_info):
-    """A collectorStr that measures each (token, direction) as a balance delta and
-    records it with collect.balanceChange(name, wholeTokenDelta); the harness's
-    Collect helper reverts them for the parser. Deltas are pre-scaled by token_info
-    decimals (single source of decimals) — the emitted values stay whole-token ints,
-    so the positional parser is unchanged. No approx to measure -> just flush (the
+    """A collectorStr that measures each (token, direction) as a balance delta and records
+    it RAW with collect.balanceChange(name, rawDelta); the harness's Collect helper reverts
+    them for the parser, which scales each raw value by token_info decimals as a float (one
+    source of decimals, kept out of Solidity). No approx to measure -> just flush (the
     Collect helper reverts "FlashSyn: 0").
     """
     def collectorStr(cls, _m=measures, _ti=token_info):
         reads, changes = "", ""
         for i, (tok, direction) in enumerate(_m):
             info = _ti[tok]
-            var, dec = info[0], info[1]
             native = len(info) > 2 and info[2] == "native"
-            acc = "address(attacker).balance" if native else "{}.balanceOf(address(attacker))".format(var)
+            acc = "address(attacker).balance" if native else "{}.balanceOf(address(attacker))".format(info[0])
             reads += "        uint _fsC{} = {};\n".format(i, acc)
             delta = "({} - _fsC{})".format(acc, i) if direction == "gain" else "(_fsC{} - {})".format(i, acc)
-            changes += '        collect.balanceChange("{}", {} / 1e{});\n'.format(tok, delta, dec)
+            # Emit the RAW delta; the parser scales by token_info decimals (as a float).
+            changes += '        collect.balanceChange("{}", {});\n'.format(tok, delta)
         return "        // Collect: {}\n".format(cls.__name__) + reads + cls.actionStr() + changes + "        collect.flush();\n"
     return collectorStr
 
@@ -187,7 +187,9 @@ def load(manifest_path):
         "TokenPrices": prices,
         "TargetTokens": list(prices.keys()),
         "tokenInfo": token_info,
-        "profitTokens": list(m["profit_tokens"]),   # profitSummary()'s named-revert order for the parser
+        # profitSummary()'s (token, decimals) order: the parser maps its named revert to
+        # positions and scales each raw balance by decimals, like the collectors.
+        "profitTokens": [(t, token_info[t][1]) for t in m["profit_tokens"]],
         "calcProfit": staticmethod(_make_calc_profit(m["profit_tokens"], initial, prices)),
     })
 
@@ -209,9 +211,10 @@ def load(manifest_path):
             "actionStr": classmethod(_make_action_str(a["name"], solidity)),
         }
         measures = _measures_for(a)
-        # measured-token names in approxN order; the parser maps a named collector revert
-        # to positions with this, so the collector's emit order doesn't have to match.
-        attrs["_measured_tokens"] = [tok for tok, _ in measures]
+        # (token, decimals) in approxN order; the parser maps a named collector revert to
+        # positions with the names (emit order need not match) and scales each raw value by
+        # the decimals. token_info[tok] = (var, decimals[, "native"]).
+        attrs["_measured_tokens"] = [(tok, token_info[tok][1]) for tok, _ in measures]
         if "collect.balanceChange" in solidity:
             attrs["collectorStr"] = classmethod(_make_inline_collector())              # Mode B: author records inline
         else:

@@ -30,7 +30,7 @@ def _dp(n):
 
 
 def _dp_ordered(orders):
-    """Data points carrying a measured-token order: [[paras], stats, order]."""
+    """Data points carrying a (token, decimals) order: [[paras], stats, order]."""
     return [[[i], None, order] for i, order in enumerate(orders)]
 
 
@@ -45,21 +45,27 @@ class ParseDatapointsTest(unittest.TestCase):
         self.assertEqual(dp[1][1], [789])
 
     def test_named_reverts_map_to_positions_by_order(self):
-        # The Collect helper reverts "FlashSyn: tok=val ..."; the recorded order
-        # (approxN order) maps values to positions regardless of the EMIT order, so a
-        # collector that lists dUSDC before eUSDC still lands them in [eUSDC, dUSDC].
+        # The Collect helper reverts "FlashSyn: tok=<raw> ..."; the (token, decimals) order
+        # maps values to positions regardless of EMIT order, so a collector that lists dUSDC
+        # before eUSDC still lands them in [eUSDC, dUSDC]. decimals=0 here isolates the reorder.
         out = _forge_json({"testExample0_()": FLASHSYN_MARKER + ": dUSDC=456 eUSDC=123"})
-        dp = parse_datapoints(out, _dp_ordered([["eUSDC", "dUSDC"]]))
+        dp = parse_datapoints(out, _dp_ordered([[("eUSDC", 0), ("dUSDC", 0)]]))
         self.assertEqual(dp[0][1], [123, 456])
 
-    def test_named_without_order_falls_back_to_emit_order(self):
+    def test_named_values_are_scaled_by_decimals_as_floats(self):
+        # raw wei in, whole-token float out: 5_000_000 / 1e6 = 5.0, 1_500_000_000_000_000_000 / 1e18 = 1.5
+        out = _forge_json({"testExample0_()": FLASHSYN_MARKER + ": USDC=5000000 ETH=1500000000000000000"})
+        dp = parse_datapoints(out, _dp_ordered([[("USDC", 6), ("ETH", 18)]]))
+        self.assertEqual(dp[0][1], [5.0, 1.5])
+
+    def test_named_without_order_falls_back_to_emit_order_unscaled(self):
         out = _forge_json({"testExample0_()": FLASHSYN_MARKER + ": eUSDC=123 dUSDC=456"})
         self.assertEqual(parse_datapoints(out, _dp(1))[0][1], [123, 456])
 
     def test_named_token_with_a_digit_is_not_split(self):
         # a positional \d+ scan would read [2, 5]; named parsing keeps USDT2 as one name
-        out = _forge_json({"testExample0_()": FLASHSYN_MARKER + ": USDT2=5"})
-        self.assertEqual(parse_datapoints(out, _dp_ordered([["USDT2"]]))[0][1], [5])
+        out = _forge_json({"testExample0_()": FLASHSYN_MARKER + ": USDT2=5000000"})
+        self.assertEqual(parse_datapoints(out, _dp_ordered([[("USDT2", 6)]]))[0][1], [5.0])
 
     def test_no_marker_is_none(self):
         out = _forge_json({"testExample0_()": "e/collateral-violation"})

@@ -43,12 +43,11 @@ python3 flashsyn.py synthesize euler > run.log   # counter-example synthesis
 ```
 
 Expected result: FlashSyn rediscovers the exploit — best vector
-`eulerDeposit → eulerMint → eulerDonate → eulerLiquidateWithdraw`, **Best Profit 29,185,439**
-with parameters `[199600000, 1479041079, 423197409]`. (This is a higher-profit
-parameterization of the same self-liquidation than the historical ~22.4M reference; the
-modern optimizer settles on a different optimum.) Early rounds printing `0 executions
-succeed` / `Best Profit 0.2` are the pre-refinement phase, not a failure — let it run to
-`End of Synthesis`.
+`eulerDeposit → eulerMint → eulerDonate → eulerLiquidateWithdraw`, **Best Profit 22,415,806**
+with parameters `[100585937, 1501953125, 908203125]` — close to the historical ~22.4M
+reference, and deterministic (three runs land on the same profit). Early rounds printing
+`0 executions succeed` / `Best Profit 0.2` are the pre-refinement phase, not a failure — let
+it run to `End of Synthesis`.
 
 > Note: `eulerLiquidateWithdraw` and `eulerTouch` have `numInputs = 0`; `eulerTouch` is a
 > no-op (it collects no data and is skipped during collection). The exploit does not use it.

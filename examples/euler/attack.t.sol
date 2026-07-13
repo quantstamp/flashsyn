@@ -95,7 +95,7 @@ contract euler is DSTest, stdCheats {
     }
 
     function profitSummary() public view returns (string memory) {
-        return Strings.append("FlashSyn: USDC=", USDC.balanceOf(address(attacker)) / 1e6);
+        return Strings.append("FlashSyn: USDC=", USDC.balanceOf(address(attacker)));
     }
 
     function testExample0() public {

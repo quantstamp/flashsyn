@@ -44,17 +44,18 @@ _NAMED = re.compile(r"([A-Za-z_]\w*)=(\d+)")
 
 
 def _stats_from_reason(reason, order=None):
-    """Return the collected stats (a positional list of ints) from a revert reason, or None.
+    """Return the collected stats (a positional list) from a revert reason, or None.
 
     Two revert shapes share the marker:
-      - Named (the Collect helper's flush):  "FlashSyn: eUSDC=123 dUSDC=456"
-      - Positional (profitSummary, or a bare "FlashSyn: 0"):  "FlashSyn: 268 400"
+      - Named (the Collect helper's flush):  "FlashSyn: eUSDC=<raw> dUSDC=<raw>"
+      - Positional (a bare "FlashSyn: 0" for a no-measure action):  "FlashSyn: 0"
 
-    For the named shape, `order` (the terminal action's measured-token names, in approxN
-    order) maps values to positions independently of the emit order — so the collector
-    can list tokens in any order. Without `order` we fall back to emit order. A name in
-    `order` that the revert didn't report is a real producer/consumer mismatch, so raise.
-    Only text AFTER the marker is parsed, so a digit before it can't leak in.
+    Values are emitted RAW (unscaled). `order` is a list of (token, decimals) in the
+    expected position order, so we (a) map each named value to its position regardless of
+    emit order, and (b) scale it to whole tokens as a float (raw / 10**decimals) — the
+    scaling lives here (one source: token_info), not in Solidity. A name in `order` the
+    revert didn't report is a real producer/consumer mismatch, so raise. Without `order`
+    we fall back to emit order, unscaled. Only text AFTER the marker is parsed.
     """
     if not reason:
         return None
@@ -66,12 +67,12 @@ def _stats_from_reason(reason, order=None):
     if named:
         by_name = {name: int(v) for name, v in named}
         if order is not None:
-            missing = [t for t in order if t not in by_name]
+            missing = [tok for tok, _ in order if tok not in by_name]
             if missing:
                 raise KeyError("collector reported {} but the action measures {}; missing {}".format(
-                    sorted(by_name), list(order), missing))
-            return [by_name[t] for t in order]
-        return [int(v) for _, v in named]        # emit order (already approxN order by construction)
+                    sorted(by_name), [tok for tok, _ in order], missing))
+            return [by_name[tok] / (10 ** dec) for tok, dec in order]
+        return [int(v) for _, v in named]        # no order: emit order, unscaled (fallback)
     stats = [int(s) for s in re.findall(r"\d+", tail)]
     return stats if stats else None
 

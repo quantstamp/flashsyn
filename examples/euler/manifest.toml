@@ -21,7 +21,8 @@ USDC = 400000000
 USDC = 1.0
 
 # token -> [contract variable in the harness, decimals]. The generated collectors read
-# balanceOf(<var>) and scale by <decimals>, so every measured token needs an entry.
+# balanceOf(<var>) and emit the RAW delta; the parser scales by <decimals> in Python, so
+# every measured token (and profit_tokens) needs an entry.
 [token_info]
 eUSDC = ["eUSDC", 18]
 dUSDC = ["dUSDC", 6]
