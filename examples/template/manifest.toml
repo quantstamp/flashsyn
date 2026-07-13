@@ -4,10 +4,11 @@
 # you write is the Solidity harness next to it (attack.t.sol). See README.md here.
 #
 # Run it (from the repo root):
-#   python3 flashsyn.py compile    <your-name>   # harness compiles + runs vs the fork
-#   python3 flashsyn.py deps       <your-name>   # (optional) action dependency graph
+#   python3 flashsyn.py compile    <your-name>   # forge build — does the harness compile?
+#   python3 flashsyn.py validate   <your-name>   # smoke-check each action runs (from the manifest)
 #   python3 flashsyn.py collect    <your-name>   # sample the actions -> initialDataPoints/
 #   python3 flashsyn.py synthesize <your-name> > run.log
+#   python3 flashsyn.py deps       <your-name>   # diagnostic only: print a dependency graph
 # =============================================================================
 
 name = "template"          # benchmark id; also the initialDataPoints/<name>/ folder
@@ -33,9 +34,12 @@ TOKENB = 20000000
 TOKENA = 1.0
 TOKENB = 1.0
 
-# Every token an action moves -> [its contract variable in attack.t.sol, its decimals].
-# The data collector reads balances through these, so a plain action needs no collector
-# code. Include intermediate tokens too (e.g. vault shares), even if not a profit token.
+# Every token an action touches -> [its contract variable in attack.t.sol, its decimals].
+# The generated collector reads balanceOf(<var>) and emits the RAW amount; the parser scales
+# by <decimals> in Python (one source of decimals — never in Solidity). A 3rd element
+# "native" (e.g. ETH = ["", 18, "native"]) means the token has no ERC20 balanceOf, so the
+# collector reads address(attacker).balance instead. Include every token an action moves
+# (intermediate vault shares too), even if it isn't a profit token.
 [token_info]
 TOKENA = ["TOKENA", 6]
 TOKENB = ["TOKENB", 6]
