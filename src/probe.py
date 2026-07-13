@@ -18,25 +18,30 @@ PROBE_MARKER = "PROBE_OK"
 _TEST = re.compile(r"testExample(\d+)")
 
 
-def _probe_values(action):
-    """In-range values to try, spanning small -> large (or [None] for a 0-input action).
+# Fractions of the search range to probe, expressed as span divisors, from tiny (span/1000)
+# to mid (span/2). The amount an action can actually execute at depends on how much its
+# prefix produced — which we can't predict from the manifest — so we spread across several
+# orders of magnitude and take the first value that runs. We deliberately DON'T probe the
+# range's high end: an action consuming a produced token (burn, donate) holds far less than
+# the range top, so a large value just reverts (amount-too-large / insufficient-balance).
+_PROBE_SPAN_DIVISORS = (1000, 100, 4, 2)
 
-    Small values matter: an action consuming a produced token (burn/donate) usually holds
-    far less than the search range's high end, so a large probe reverts (amount-too-large)
-    while a small one runs. Trying the spread means one bad value doesn't mask a live action.
-    """
+
+def _probe_values(action):
+    """In-range values to try, tiny -> mid (or [None] for a 0-input action like touch)."""
     r = list(getattr(action, "range", []) or [])
     if getattr(action, "numInputs", 0) == 0 or len(r) != 2:
         return [None]
     lo, hi = r
     span = hi - lo
-    cands = [lo + 1, lo + max(1, span // 1000), lo + max(1, span // 100),
-             lo + max(1, span // 4), lo + span // 2]
+    # lo + 1 is the smallest legal value (some actions revert at 0); then the divisor spread.
+    # max(1, ...) keeps every candidate above lo even when the span is tiny.
+    cands = [lo + 1] + [lo + max(1, span // d) for d in _PROBE_SPAN_DIVISORS]
     out = []
     for v in cands:
-        if lo < v <= hi and v not in out:
+        if lo < v <= hi and v not in out:     # in range and de-duplicated (keep first/smallest)
             out.append(v)
-    return out or [hi]
+    return out or [hi]                        # degenerate range (lo == hi): fall back to hi
 
 
 def _mid_value(action):
