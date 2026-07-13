@@ -66,15 +66,15 @@ params are the consumed `tokens_in` amounts and `simulate()`'s outputs go to `to
 When an action breaks those assumptions:
 
 - **`effects`** — a declarative balance transition (replaces `transit`), a list of
-  `{token, op, src}` where `op` is `add | sub | set` and `src` is `paramN` (the Nth `$$`),
-  `approxN` (the Nth measured value), or `0`. For actions that invert parameter/approximation
-  (borrow, mint), set a balance to a constant (a liquidation → `op = set, src = 0`; any
-  whole-token number works), or have no measured
-  output (donate, burn). `effects` also drives what the derived collector measures (each
-  `approxN` token; `add`→gain, `sub`→spend).
-- **inline measurement** — when the measured quantity is an *internal* value (not a
+  `{token, op, src}` where `op` is `add | sub | set` and `src` is `input` (the sole `$$`;
+  `inputN` for multi), `collected` (this token's own collected value), or a number constant.
+  For actions that invert parameter/collection (borrow, mint), set a balance to a constant
+  (a liquidation → `op = set, src = 0`; any whole-token number works), or have no measured
+  output (donate, burn). `effects` also drives the derived collector: each `collected` token
+  is `gained` (`add`) or `spent` (`sub`).
+- **inline measurement** — when the collected quantity is an *internal* value (not a
   start-to-end balance delta, e.g. borrow's collateral `_dep`), record it in `solidity` with
-  `collect.balanceChange("<tok>", value)`; the engine just appends `collect.flush()`.
+  `collect.spent("<tok>", value)` / `collect.gained(...)`; the engine just appends `collect.flush()`.
 - **native tokens** — a `token_info` entry `["", 18, "native"]` makes the collector read
   `address(attacker).balance` instead of `balanceOf`.
 

@@ -23,8 +23,8 @@ produced `tokens_out` amount is the approximation. For `borrow` it is reversed: 
 ETH collateral that is an approximated function of the manipulated oracle (consumed
 `tokens_in`). That collateral is the internal value `_dep`, not a start-to-end balance
 delta, so `PoolBorrow` records it **inline** in its `solidity`
-(`collect.balanceChange("ETH", _dep / 1e18)`) and gives an `effects` list that inverts the
-transit (`DVT add param0`, `ETH sub approx0`).
+(`collect.spent("ETH", _dep)`) and gives an `effects` list that inverts the
+transit (`DVT add input`, `ETH sub collected`).
 
 The swaps are auto-derived: `SwapUniswapDVT2ETH` measures **native ETH** (via the
 `token_info` `"native"` flag → `address(attacker).balance`), and `SwapUniswapETH2DVT`

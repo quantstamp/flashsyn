@@ -29,7 +29,7 @@ dUSDC = ["dUSDC", 6]
 USDC = ["USDC", 6]
 
 # deposit USDC -> eUSDC. A plain deposit: the derived balanceOf collector and the
-# default transit (USDC -= param, eUSDC += approx) both apply, so no escape hatches.
+# default transit (USDC -= input, eUSDC += collected) both apply, so no escape hatches.
 [[actions]]
 name = "eulerDeposit"
 tokens_in = ["USDC"]
@@ -39,7 +39,7 @@ solidity = "eUSDC.deposit(0, $$ * 1e6);"
 
 # burn eUSDC. No net token received (tokens_out empty); the two consumed amounts are
 # subtracted. The collector is derived from effects: two `sub` -> two before-after deltas
-# (eUSDC as approx0, dUSDC as approx1), scaled by their token_info decimals.
+# (eUSDC then dUSDC, both `collected`), scaled by their token_info decimals.
 [[actions]]
 name = "eulerBurn"
 tokens_in = ["eUSDC", "dUSDC"]
@@ -47,8 +47,8 @@ tokens_out = []
 range = [0, 200000]
 solidity = "eUSDC.burn(0, $$ * 1e18);"
 effects = [
-  { token = "eUSDC", op = "sub", src = "approx0" },
-  { token = "dUSDC", op = "sub", src = "approx1" },
+  { token = "eUSDC", op = "sub", src = "collected" },
+  { token = "dUSDC", op = "sub", src = "collected" },
 ]
 
 # touch: a no-op state poke. No parameter, no measured output, no balance change.
@@ -58,7 +58,7 @@ tokens_in = []
 tokens_out = []
 range = []
 solidity = "eUSDC.touch();"
-# No approx effects -> nothing measured -> collect.flush() reverts "FlashSyn: 0".
+# No `collected` effects -> nothing measured -> collect.flush() reverts "FlashSyn: 0".
 effects = []
 
 # donate eUSDC to reserves. No token received; the collector measures the consumed
@@ -70,11 +70,11 @@ tokens_out = []
 range = [0, 2000000000]
 solidity = "eUSDC.donateToReserves(0, $$ * 1e18);"
 effects = [
-  { token = "eUSDC", op = "sub", src = "approx0" },
+  { token = "eUSDC", op = "sub", src = "collected" },
 ]
 
 # mint eUSDC. Inverts the default model: the search parameter is the dUSDC debt taken
-# on (received), and the eUSDC minted is the approximated quantity the collector reads.
+# on (received), and the eUSDC minted is the `collected` quantity the collector reads.
 [[actions]]
 name = "eulerMint"
 tokens_in = ["eUSDC"]
@@ -82,13 +82,13 @@ tokens_out = ["eUSDC", "dUSDC"]
 range = [0, 2000000000]
 solidity = "eUSDC.mint(0, $$ * 1e6);"
 effects = [
-  { token = "dUSDC", op = "add", src = "param0" },
-  { token = "eUSDC", op = "add", src = "approx0" },
+  { token = "dUSDC", op = "add", src = "input" },
+  { token = "eUSDC", op = "add", src = "collected" },
 ]
 
 # liquidate the attacker's own position from a second account, then withdraw the USDC.
 # Multi-statement Solidity with prank switching; the debt/collateral positions are
-# closed out (set to 0) and the recovered USDC is the approximated output.
+# closed out (set to 0) and the recovered USDC is the `collected` output.
 [[actions]]
 name = "eulerLiquidateWithdraw"
 tokens_in = ["dUSDC", "eUSDC"]
@@ -106,11 +106,11 @@ solidity = """
         USDC.transfer(address(attacker), USDC.balanceOf(address(attacker2)));
         vm.stopPrank();
         vm.startPrank(attacker);"""
-# Collector derived from effects: USDC `add` -> after-before delta (approx0); the `set 0`
+# Collector derived from effects: USDC `add` -> after-before delta (`collected`); the `set 0`
 # effects are bookkeeping only (not measured). The whole multi-statement action is
 # bracketed by the USDC read, so the prank switching is captured in the net delta.
 effects = [
-  { token = "USDC", op = "add", src = "approx0" },
+  { token = "USDC", op = "add", src = "collected" },
   { token = "dUSDC", op = "set", src = "0" },
   { token = "eUSDC", op = "set", src = "0" },
 ]

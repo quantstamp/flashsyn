@@ -144,7 +144,7 @@ class ForgeDataCollectorDVD:
         '''
         self.collectorContract += temp
         self.dataCollectorCount += 1
-        # order = the terminal action's measured-token names (approxN order), so the parser
+        # order = the terminal action's measured (token, decimals) in effect order, so the parser
         # can map a named "FlashSyn: tok=val ..." revert to positions regardless of emit order.
         self.dataPoints.append([paraList, None, order])
         # print(self.dataCollectorCount - 1)

@@ -96,13 +96,13 @@ solidity = "VAULT.withdraw($$);"
 # ESCAPE HATCH: when an action doesn't fit "the $$ params are the consumed amounts and the
 # outputs go to tokens_out", two things cover it — no Python. See examples/puppet & euler.
 #
-# 1. effects — declarative transit, replacing the default. op = add|sub|set, src = paramN
-#    (the Nth $$) | approxN (the Nth measured value) | a number constant (e.g. 0, 5). Also
-#    drives what the collector
-#    measures: each approxN token, add -> after-before (gain), sub -> before-after (spend).
-# 2. inline measurement — when the measured quantity is an INTERNAL value (not a start-to-end
-#    balance delta, e.g. borrow's collateral _dep), record it in `solidity` with
-#    collect.balanceChange("<token>", wholeTokenValue); the engine just adds collect.flush().
+# 1. effects — declarative transit, replacing the default. op = add|sub|set, src = input
+#    (the sole $$; inputN for multi) | collected (this token's own collected value) | a number
+#    constant (e.g. 0, 5). Also drives the collector: each `collected` token, add -> gained
+#    (after-before), sub -> spent (before-after).
+# 2. inline measurement — when the collected value is an INTERNAL value (not a start-to-end
+#    balance delta, e.g. borrow's collateral _dep), record it in `solidity` with a RAW
+#    collect.spent/gained("<token>", value) call; the engine just adds collect.flush().
 #
 #   [[actions]]
 #   name = "PoolBorrow"
@@ -113,8 +113,8 @@ solidity = "VAULT.withdraw($$);"
 #       _amt = $$ * 1e18;
 #       _dep = pool.calculateDepositRequired(_amt);
 #       pool.borrow{value: _dep}(_amt);
-#       collect.balanceChange("ETH", _dep / 1e18);"""   # <- inline measured value
+#       collect.spent("ETH", _dep);"""              # <- inline collected value (raw)
 #   effects = [
-#     { token = "DVT", op = "add", src = "param0" },   # received == the parameter
-#     { token = "ETH", op = "sub", src = "approx0" },  # collateral == the recorded _dep
+#     { token = "DVT", op = "add", src = "input" },      # received == the search parameter
+#     { token = "ETH", op = "sub", src = "collected" },  # collateral == the recorded _dep
 #   ]

@@ -16,17 +16,15 @@ parameter/approximation direction.
 Collectors are always derived from an action's `effects` and emitted through the `Collect` helper
 (`src/foundryModule/lib/mylib/Collect.sol`):
 
-- for every `approxN` effect, measure that token's balance delta — `op = add` → gained
-  (`after − before`), `op = sub` → spent (`before − after`) — in `approxN` order;
-- decimals come from `token_info` (single source), and the value is recorded with
-  `collect.balanceChange("<token>", wholeTokenValue)`;
-- the engine appends `collect.flush()`, which reverts `FlashSyn: <token>=<val> ...` for the
-  parser (no measured token → `FlashSyn: 0`).
+- for every `collected` effect, measure that token's balance delta and record it with
+  `collect.gained("<token>", raw)` (`op = add`, `after − before`) or `collect.spent(...)`
+  (`op = sub`, `before − after`);
+- the engine appends `collect.flush()`, which reverts `FlashSyn: <token>=<raw> ...`; the parser
+  maps values to tokens by name and scales each by `token_info` decimals (single source) as a float.
 
-So `eulerBurn` is just `solidity = "eUSDC.burn(0, $$ * 1e18);"` + two `sub` effects, and its
-collector — two before-reads, the burn, two `balanceChange` calls, a flush — is generated. The
-action Solidity is written once; the collector is never duplicated. (The revert is currently parsed
-positionally, in `approxN` order; the token names are carried but not yet consumed by the parser.)
+So `eulerBurn` is just `solidity = "eUSDC.burn(0, $$ * 1e18);"` + two `{op="sub", src="collected"}`
+effects, and its collector — two before-reads, the burn, two `collect.spent` calls, a flush — is
+generated. The action Solidity is written once; the collector is never duplicated.
 
 Chain: Ethereum mainnet, fork block **16818064**. Initial capital: 400,000,000 USDC.
 

@@ -44,16 +44,16 @@ starting point — and fill in its two files:
 Every example is a manifest — there is no separate Python action-model format. Data collectors are
 generated and emitted through a shared `Collect` helper deployed in the harness
 (`src/foundryModule/lib/mylib/Collect.sol`): the collector measures each output as a balance delta
-and records it with `collect.balanceChange("<tok>", value)`, then the engine appends
-`collect.flush()`. Two things shape an action that doesn't fit the plain swap/deposit default:
+and records it with `collect.gained("<tok>", raw)` / `collect.spent("<tok>", raw)`, then the engine
+appends `collect.flush()`. Two things shape an action that doesn't fit the plain swap/deposit default:
 
-- **`effects`** — a declarative balance transition (`[{token, op = add|sub|set, src = paramN|approxN|<number>}]`),
-  replacing the default `transit()`, for actions that invert parameter/approximation (borrow, mint),
-  zero a balance (a liquidation), or have no measured output (donate, burn). `effects` also drives what
-  the derived collector measures (each `approxN` token; `add`→gain, `sub`→spend).
-- **inline measurement** — when the measured quantity is an *internal* value rather than a start-to-end
+- **`effects`** — a declarative balance transition (`[{token, op = add|sub|set, src = input|collected|<number>}]`),
+  replacing the default `transit()`, for actions that invert parameter/collection (borrow, mint),
+  zero a balance (a liquidation), or have no measured output (donate, burn). `effects` also drives the
+  derived collector: each `collected` token is `gained` (`add`) or `spent` (`sub`).
+- **inline measurement** — when the collected quantity is an *internal* value rather than a start-to-end
   balance delta (e.g. borrow's collateral `_dep`), the action records it directly in its `solidity` with
-  a `collect.balanceChange("<tok>", value)` call; the engine just adds the `flush()`.
+  a `collect.spent("<tok>", value)` / `collect.gained(...)` call; the engine just adds the `flush()`.
 
 `token_info`'s optional 3rd element `"native"` makes the collector read `address(attacker).balance`
 (for native ETH). `tokens_in/out` always describe token *flow* for the search graph, independent of the
@@ -116,7 +116,7 @@ A **Damn Vulnerable DeFi** example lives in [`examples/puppet/`](examples/puppet
 the "Puppet" challenge, whose lending pool prices DVT off a Uniswap V1 spot oracle. Unlike
 the mainnet examples it **deploys the whole scenario locally in `setUp()`** (DVT + a Uniswap
 V1 exchange via `deployCode` + the pool), so the fork block is arbitrary. Its `borrow` action records
-its collateral inline (`collect.balanceChange("ETH", _dep / 1e18)`) with inverted `effects`, because
+its collateral inline (`collect.spent("ETH", _dep)`) with inverted `effects`, because
 the ETH collateral is an approximated function of the manipulated price, not the search parameter —
 see the example's README. The two Uniswap V1 Vyper build artifacts it deploys
 are vendored under `src/foundryModule/src/build-uniswap/v1/`. Run with

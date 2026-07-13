@@ -59,7 +59,7 @@ contract Template is DSTest, stdCheats {
 
     // Data-collection helper (deployed in setUp below). The engine derives each collector
     // from the action's tokens_out/effects and emits it through this; an action can also
-    // record an internal value inline with collect.balanceChange("TOK", value).
+    // record an internal value inline with collect.spent/gained("TOK", value).
     Collect internal collect;
 
     // TODO 3. setUp() runs before every test. Fork happens via the CLI flags. Here you:

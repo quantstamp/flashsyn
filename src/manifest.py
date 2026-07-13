@@ -28,30 +28,31 @@ Schema (see examples/harvest_usdt/manifest.toml):
     solidity = "CURVE.exchange_underlying(2, 1, $$ * 1e6, 0);"   # numInputs = count of $$
 
 Collectors are always DERIVED and emitted through the harness's Collect helper
-(src/foundryModule/lib/mylib/Collect.sol, deployed as `collect` in setUp): the action
-records named balance changes with collect.balanceChange("<tok>", rawValue) and the engine
+(src/foundryModule/lib/mylib/Collect.sol, deployed as `collect` in setUp): the action records
+a token's change with collect.gained("<tok>", raw) / collect.spent("<tok>", raw) and the engine
 appends collect.flush(), which reverts "FlashSyn: <tok>=<raw> ..."; the parser maps values to
 positions by name and scales each by token_info decimals (as a float — no rounding in Solidity).
 There is no `collector` field. Two things shape an action:
 
     effects = [                         # optional; REPLACES the default transit (consume
-      {token="DVT", op="add", src="param0"},   # tokens_in params, produce approximated
-      {token="ETH", op="sub", src="approx0"},  # tokens_out). Needed when the parameter is
-    ]                                          # a received amount and a paid amount is the
-                                               # approximation (borrow/mint), when an action
-                                               # zeroes a balance, or has no measured output.
+      {token="DVT", op="add", src="input"},     # tokens_in params, produce the collected
+      {token="ETH", op="sub", src="collected"}, # tokens_out). Needed when the parameter is
+    ]                                           # a received amount and a paid amount is the
+                                                # collected one (borrow/mint), when an action
+                                                # zeroes a balance, or has no measured output.
         # op    : add | sub | set
-        # src   : paramN (the Nth $$, 0-based) | approxN (the Nth measured value)
+        # src   : input (the sole $$; inputN for a multi-$$ action)
+        #         | collected (this token's own value the collector reported)
         #         | a number literal (whole-token constant, e.g. 0, 5, -100; handy with set)
 
-`effects` also DRIVES the derived collector (Mode A): each approxN token is measured as a
-balance delta (op=add -> after-before / gain, op=sub -> before-after / spend) in approxN
-order, scaled by token_info decimals. With no effects, the default measures each tokens_out
-as a gain. token_info's optional 3rd element "native" -> read address(attacker).balance.
+`effects` also DRIVES the derived collector (Mode A): each `collected` token is measured as a
+balance delta and recorded with collect.gained (op=add, after-before) or collect.spent (op=sub,
+before-after), scaled by token_info decimals. With no effects, the default measures each
+tokens_out as a gain. token_info's optional 3rd element "native" -> address(attacker).balance.
 
-Mode B — when the measured value is an INTERNAL quantity (not a start-to-end balance delta,
+Mode B — when the collected value is an INTERNAL quantity (not a start-to-end balance delta,
 e.g. borrow's collateral _dep), the action records it inline in `solidity` with a
-collect.balanceChange("<tok>", value) call; the engine then only appends collect.flush().
+collect.spent/gained("<tok>", value) call; the engine then only appends collect.flush().
 
 tokens_in / tokens_out always describe token FLOW for the search graph, independent of the
 above; annotate them by direction even when effects invert the magnitude bookkeeping.
@@ -84,31 +85,34 @@ def _make_action_str(name, solidity):
 def _make_transit(num_inputs, effects):
     """Declarative balance transition from an `effects` list.
 
-    Each effect is {token, op, src}. src resolves to: paramN -> the Nth of this
-    action's inputs (the last num_inputs of the input vector, matching numInputs);
-    approxN -> the Nth collector output from simulate(); or a number literal (a whole-token
-    constant, e.g. 0, 5, -100), useful with op=set to reset a balance to a fixed value.
+    Each effect is {token, op, src}. src resolves to: input -> this action's search
+    parameter (the sole $$; inputN for the Nth of a multi-$$ action); collected -> this
+    token's own value that the collector reported (via simulate()); or a number literal
+    (a whole-token constant, e.g. 0, 5, -100), useful with op=set to reset a balance.
     """
-    def transit(cls, inputs, actionList, _effects=effects, _n=num_inputs):
+    collected_tokens = [e["token"] for e in effects if e["src"] == "collected"]
+
+    def transit(cls, inputs, actionList, _effects=effects, _n=num_inputs, _coll=collected_tokens):
         params = inputs[-_n:] if _n else []
         outputs = None
         for e in _effects:
             src = e["src"]
-            if isinstance(src, str) and src.startswith("param"):
-                val = params[int(src[len("param"):])]
-            elif isinstance(src, str) and src.startswith("approx"):
+            if src == "collected":
                 if outputs is None:
                     outputs = cls.simulate(inputs, actionList)
-                val = outputs[int(src[len("approx"):])]
+                val = outputs[_coll.index(e["token"])]         # this token's collected value
+            elif isinstance(src, str) and src.startswith("input"):
+                idx = src[len("input"):]
+                val = params[int(idx) if idx else 0]           # input == input0 (the sole $$)
             elif isinstance(src, (int, float)):
                 val = src                                       # literal constant (TOML number)
             elif isinstance(src, str):
                 try:
                     val = float(src) if "." in src else int(src)   # numeric string, incl. "0"
                 except ValueError:
-                    raise ValueError("bad effect src {!r} (want paramN | approxN | a number)".format(src))
+                    raise ValueError("bad effect src {!r} (want input | collected | a number)".format(src))
             else:
-                raise ValueError("bad effect src {!r} (want paramN | approxN | a number)".format(src))
+                raise ValueError("bad effect src {!r} (want input | collected | a number)".format(src))
             tok, op = e["token"], e["op"]
             cur = cls.currentBalances.get(tok, 0)
             if op == "add":
@@ -123,28 +127,23 @@ def _make_transit(num_inputs, effects):
 
 
 def _measures_for(action):
-    """The (token, direction) to measure for an action, in approxN order.
+    """The (token, direction) to measure for an action, in effect order.
 
-    direction is 'gain' (op=add -> after-before) or 'spend' (op=sub -> before-after).
-    Derived from the effects whose src is approxN; if there are none, fall back to the
-    default (measure each tokens_out as a gain), so a plain action needs no effects.
+    direction is 'gain' (op=add -> collect.gained, after-before) or 'spend' (op=sub ->
+    collect.spent, before-after). Derived from the effects whose src is 'collected'; if there
+    are none, fall back to the default (measure each tokens_out as a gain), so a plain action
+    needs no effects.
     """
-    approx = []
-    for e in action.get("effects", []):
-        src = e["src"]
-        if src.startswith("approx"):
-            approx.append((int(src[len("approx"):]),
-                           e["token"],
-                           "gain" if e["op"] == "add" else "spend"))
-    if approx:
-        approx.sort()
-        return [(tok, d) for _, tok, d in approx]
+    collected = [(e["token"], "gain" if e["op"] == "add" else "spend")
+                 for e in action.get("effects", []) if e["src"] == "collected"]
+    if collected:
+        return collected
     return [(t, "gain") for t in action["tokens_out"]]
 
 
 def _make_inline_collector():
     """Collector for an action that records its own measurement inline in `solidity`
-    (a collect.balanceChange(...) call — e.g. an internal value like borrow's _dep that
+    (a collect.spent/gained(...) call — e.g. an internal value like borrow's _dep that
     isn't a start-to-end balance delta). The engine only appends collect.flush()."""
     def collectorStr(cls):
         return "        // Collect: {}\n".format(cls.__name__) + cls.actionStr() + "        collect.flush();\n"
@@ -153,10 +152,10 @@ def _make_inline_collector():
 
 def _make_collect_collector(measures, token_info):
     """A collectorStr that measures each (token, direction) as a balance delta and records
-    it RAW with collect.balanceChange(name, rawDelta); the harness's Collect helper reverts
+    it RAW with collect.gained/spent(name, rawDelta); the harness's Collect helper reverts
     them for the parser, which scales each raw value by token_info decimals as a float (one
-    source of decimals, kept out of Solidity). No approx to measure -> just flush (the
-    Collect helper reverts "FlashSyn: 0").
+    source of decimals, kept out of Solidity). No measure -> just flush (the Collect helper
+    reverts "FlashSyn: 0").
     """
     def collectorStr(cls, _m=measures, _ti=token_info):
         reads, changes = "", ""
@@ -165,9 +164,12 @@ def _make_collect_collector(measures, token_info):
             native = len(info) > 2 and info[2] == "native"
             acc = "address(attacker).balance" if native else "{}.balanceOf(address(attacker))".format(info[0])
             reads += "        uint _fsC{} = {};\n".format(i, acc)
-            delta = "({} - _fsC{})".format(acc, i) if direction == "gain" else "(_fsC{} - {})".format(i, acc)
-            # Emit the RAW delta; the parser scales by token_info decimals (as a float).
-            changes += '        collect.balanceChange("{}", {});\n'.format(tok, delta)
+            # subtract in whichever order keeps the raw magnitude positive; the direction is
+            # the method name. The parser scales the raw value by token_info decimals (float).
+            if direction == "gain":
+                changes += '        collect.gained("{}", {} - _fsC{});\n'.format(tok, acc, i)
+            else:
+                changes += '        collect.spent("{}", _fsC{} - {});\n'.format(tok, i, acc)
         return "        // Collect: {}\n".format(cls.__name__) + reads + cls.actionStr() + changes + "        collect.flush();\n"
     return collectorStr
 
@@ -200,7 +202,7 @@ def load(manifest_path):
         if "collector" in a:
             raise ValueError("action {}: the 'collector' field was removed. Rely on the "
                              "derived collector (from effects/tokens_out), or record an "
-                             "internal value inline with collect.balanceChange(...) in "
+                             "internal value inline with collect.spent/gained(...) in "
                              "solidity.".format(a["name"]))
         attrs = {
             "approximators": NumericalApproximatorsPro(),
@@ -211,11 +213,11 @@ def load(manifest_path):
             "actionStr": classmethod(_make_action_str(a["name"], solidity)),
         }
         measures = _measures_for(a)
-        # (token, decimals) in approxN order; the parser maps a named collector revert to
+        # (token, decimals) in effect (collected) order; the parser maps a named collector revert to
         # positions with the names (emit order need not match) and scales each raw value by
         # the decimals. token_info[tok] = (var, decimals[, "native"]).
         attrs["_measured_tokens"] = [(tok, token_info[tok][1]) for tok, _ in measures]
-        if "collect.balanceChange" in solidity:
+        if "collect.spent" in solidity or "collect.gained" in solidity:
             attrs["collectorStr"] = classmethod(_make_inline_collector())              # Mode B: author records inline
         else:
             attrs["collectorStr"] = classmethod(_make_collect_collector(measures, token_info))  # Mode A: derived

@@ -39,7 +39,7 @@ range = [0, 1000]                          # can't sell more DVT than the attack
 solidity = "uniswapExchange.tokenToEthSwapInput($$ * 1e18, 1, 0xffffffff);"
 
 # Buy DVT back with ETH (the reverse leg). Output is the DVT ERC20, so the derived collector
-# (DVT gain via balanceOf) and the default transit (ETH -= param, DVT += approx) both apply.
+# (DVT gain via balanceOf) and the default transit (ETH -= input, DVT += collected) both apply.
 [[actions]]
 name = "SwapUniswapETH2DVT"
 tokens_in = ["ETH"]
@@ -50,18 +50,18 @@ solidity = "uniswapExchange.ethToTokenSwapInput{value: $$ * 1e18}(1, 0xffffffff)
 # Borrow DVT from the pool. Inverts the default model: the search parameter is the DVT
 # RECEIVED, while the ETH collateral is a function of the manipulated oracle. That collateral
 # is the internal value _dep — not a start-to-end balance delta — so the action records it
-# inline with collect.balanceChange (Mode B); the engine just appends collect.flush().
+# inline with collect.spent (Mode B); the engine just appends collect.flush().
 [[actions]]
 name = "PoolBorrow"
-tokens_in = ["ETH"]                        # collateral paid (approximated), not the param
+tokens_in = ["ETH"]                        # collateral paid (collected), not the search param
 tokens_out = ["DVT"]                       # borrowed amount == the search param
 range = [0, 100000]                        # up to the pool's whole 100k DVT reserve
 solidity = """
         _amt = $$ * 1e18;
         _dep = puppetPool.calculateDepositRequired(_amt);
         puppetPool.borrow{value: _dep}(_amt);
-        collect.balanceChange("ETH", _dep);"""
+        collect.spent("ETH", _dep);"""
 effects = [
-  { token = "DVT", op = "add", src = "param0" },   # received == the parameter
-  { token = "ETH", op = "sub", src = "approx0" },   # collateral == the recorded _dep
+  { token = "DVT", op = "add", src = "input" },      # received == the search parameter
+  { token = "ETH", op = "sub", src = "collected" },  # collateral == the recorded _dep
 ]
