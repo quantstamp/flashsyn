@@ -85,10 +85,9 @@ contract Harvest_USDT is DSTest, stdCheats {
 
     // Profit is measured over both tokens; the parser reads the two integers after "FlashSyn".
     function profitSummary() public view returns (string memory) {
-        return Strings.append(
-            "FlashSyn: ",
-            Strings.appendWithSpace(USDT.balanceOf(address(attacker)) / 1e6, USDC.balanceOf(address(attacker)) / 1e6)
-        );
+        return Strings.appendWithSpace(
+            Strings.append("FlashSyn: USDT=", USDT.balanceOf(address(attacker)) / 1e6),
+            Strings.append("USDC=", USDC.balanceOf(address(attacker)) / 1e6));
     }
 
     function testExample0() public {

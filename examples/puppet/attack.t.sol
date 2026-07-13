@@ -161,8 +161,8 @@ contract Puppet is DSTest, stdCheats {
     // "FlashSyn", and PuppetActions.calcProfit weighs them (ETH at 1000, DVT at 1).
     function profitSummary() public view returns (string memory) {
         return Strings.appendWithSpace(
-            Strings.append("FlashSyn: ", dvt.balanceOf(address(attacker)) / 1e18),
-            address(attacker).balance / 1e18);
+            Strings.append("FlashSyn: DVT=", dvt.balanceOf(address(attacker)) / 1e18),
+            Strings.append("ETH=", address(attacker).balance / 1e18));
     }
 
     // Validation tests for `compile` / `deps` — the engine discards these when it

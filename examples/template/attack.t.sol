@@ -87,11 +87,9 @@ contract Template is DSTest, stdCheats {
     // TODO 4. Print the profit tokens, in the SAME ORDER as manifest profit_tokens.
     // The string must contain "FlashSyn"; the integers after it are parsed as balances.
     function profitSummary() public view returns (string memory) {
-        return Strings.append(
-            "FlashSyn: ",
-            Strings.appendWithSpace(TOKENA.balanceOf(address(attacker)) / 1e6,
-                                    TOKENB.balanceOf(address(attacker)) / 1e6)
-        );
+        return Strings.appendWithSpace(
+            Strings.append("FlashSyn: TOKENA=", TOKENA.balanceOf(address(attacker)) / 1e6),
+            Strings.append("TOKENB=", TOKENB.balanceOf(address(attacker)) / 1e6));
     }
 
     // ---- Everything above is the "preamble" the engine reads. Everything below is

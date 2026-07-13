@@ -214,7 +214,7 @@ def singleCollect(Actions, actionWrapper, para_product):
     for pp in para_product:
         if pp not in used:
             used.append(pp)
-            forge.addDataCollector(pp)
+            forge.addDataCollector(pp, getattr(actionWrapper, "profitTokens", None))  # attack -> profitSummary names
 
     forge.updateDataCollectorContract()
     datapoints = forge.executeCollectData()
@@ -888,7 +888,7 @@ def testRealProfit_Batch(action_lists, para_lists, ActionWrapper):
         for jj in range(len(para_lists[ii])):
             total += 1
             para_list = para_lists[ii][jj]
-            index = forgeBatch.addDataCollector(para_list)
+            index = forgeBatch.addDataCollector(para_list, getattr(ActionWrapper, "profitTokens", None))  # attack -> profitSummary names
             stop_indexes[-1] = index
     forgeBatch.updateDataCollectorContract()
 

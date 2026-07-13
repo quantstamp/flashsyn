@@ -187,6 +187,7 @@ def load(manifest_path):
         "TokenPrices": prices,
         "TargetTokens": list(prices.keys()),
         "tokenInfo": token_info,
+        "profitTokens": list(m["profit_tokens"]),   # profitSummary()'s named-revert order for the parser
         "calcProfit": staticmethod(_make_calc_profit(m["profit_tokens"], initial, prices)),
     })
 
