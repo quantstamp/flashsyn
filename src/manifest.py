@@ -164,8 +164,12 @@ def _make_collect_collector(measures, token_info):
             native = len(info) > 2 and info[2] == "native"
             acc = "address(attacker).balance" if native else "{}.balanceOf(address(attacker))".format(info[0])
             reads += "        uint _fsC{} = {};\n".format(i, acc)
-            # subtract in whichever order keeps the raw magnitude positive; the direction is
-            # the method name. The parser scales the raw value by token_info decimals (float).
+            # LOAD-BEARING order: these are uint subtractions in Solidity, which REVERT on
+            # underflow (>=0.8). A gain has after > before, a spend has before > after, so we
+            # subtract the smaller from the larger to keep the raw magnitude a valid positive
+            # uint; the direction lives in the method name (gained/spent) + the effect op. The
+            # parser scales the raw value by token_info decimals (float). Swap either and the
+            # collector panics instead of recording the value.
             if direction == "gain":
                 changes += '        collect.gained("{}", {} - _fsC{});\n'.format(tok, acc, i)
             else:
