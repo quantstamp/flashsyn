@@ -1,7 +1,7 @@
 # Euler Finance exploit, 13 Mar 2023, block 16818064. Declarative benchmark: the
 # flashsyn CLI builds the action model from this file; the Solidity harness (setUp /
-# interfaces / profitSummary, and the contract-level `temp`/`repay`/`yield` locals the
-# liquidation action reuses) lives next to it in attack.t.sol.
+# interfaces, and the contract-level `temp`/`repay`/`yield` locals the liquidation
+# action reuses) lives next to it in attack.t.sol.
 
 name = "euler"
 contract = "euler"       # --match-contract name in attack.t.sol
@@ -10,7 +10,7 @@ block = 16818064
 max_synthesis_len = 6
 
 
-# Profit = (final - initial) * price over these, in profitSummary() output order.
+# Profit = (final - initial) * price over these, in profit readout order (see manifest._profit_readout).
 profit_tokens = ["USDC"]
 
 # Attacker starts with 400M USDC flash-loaned — must match setUp() in attack.t.sol.

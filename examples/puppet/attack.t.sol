@@ -156,12 +156,4 @@ contract Puppet is DSTest, stdCheats {
         vm.startPrank(attacker);
         dvt.approve(address(uniswapExchange), 2 ** 256 - 1);
     }
-
-    // Profit is measured over DVT then ETH — the parser reads the two named values after
-    // "FlashSyn", and the manifest's calcProfit weighs them (ETH at 1000, DVT at 1).
-    function profitSummary() public view returns (string memory) {
-        return Strings.appendWithSpace(
-            Strings.append("FlashSyn: DVT=", dvt.balanceOf(address(attacker))),
-            Strings.append("ETH=", address(attacker).balance));
-    }
 }

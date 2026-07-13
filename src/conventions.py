@@ -28,14 +28,14 @@ PLACEHOLDER = "$$"
 
 
 # The generated collector/attack Solidity is appended directly after the harness
-# preamble (interfaces + contract decl + state vars + setUp + profitSummary). These
+# preamble (interfaces + contract decl + state vars + setUp). These
 # tokens are the first thing that comes AFTER the preamble in both an authored
 # harness (`function testExampleN()`) and a generated collector file (`function
 # helperN_(...)` emitted by forgeCollectDVD). Slicing a harness at the earliest of
 # them recovers the preamble, so an action model no longer has to duplicate it as a
 # `start_str` literal — see extract_preamble() and FlashSynProActions/ActionPro.py.
 # A harness preamble must therefore NOT contain these tokens (e.g. don't name a
-# helper function "helper" or mention "testExample" in setUp/profitSummary).
+# helper function "helper" or mention "testExample" in setUp).
 PREAMBLE_BOUNDARIES = ("function testExample", "function helper")
 
 

@@ -9,7 +9,7 @@ block = 11129474
 max_synthesis_len = 4
 
 
-# Profit = sum over these of (final - initial) * price, in profitSummary() output order.
+# Profit = sum over these of (final - initial) * price, in profit readout order (see manifest._profit_readout).
 profit_tokens = ["USDT", "USDC"]
 
 # Capital the historical exploit flash-loaned; keep consistent with the harness setUp().

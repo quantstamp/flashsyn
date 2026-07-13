@@ -25,8 +25,8 @@ def ToString(action_list):
 
 
 class ActionPro():
-    # The Solidity preamble (interfaces + contract + setUp + profitSummary) the
-    # generated collectors are appended to. Leave it as this default '' and the
+    # The Solidity preamble (interfaces + contract + setUp) the generated
+    # collectors are appended to. Leave it as this default '' and the
     # engine reads the preamble straight from the authored attack.t.sol instead
     # (see forge/forgeCollectDVD.py) — one source of truth, no duplication. Only
     # set it to a literal to override that (the Euler example still does).
@@ -88,12 +88,17 @@ class ActionPro():
         return profit
 
     
+    # The Solidity appended after the action sequence to revert the final profit readout.
+    # Manifest-driven wrappers set profitReadout (derived from profit_tokens + token_info, see
+    # manifest._profit_readout); the default preserves the legacy hand-authored profitSummary().
+    profitReadout = "       revert(profitSummary());\n"
+
     # Don't change
     # Used to construct the foundry script
     @classmethod
     def buildAttackContract(cls, ActionList):
-        cls.attack_str = buildDVDattackContract(ActionList) + "       revert(profitSummary());\n"
-        return cls.attack_str   
+        cls.attack_str = buildDVDattackContract(ActionList) + cls.profitReadout
+        return cls.attack_str
     
 
     # Don't change

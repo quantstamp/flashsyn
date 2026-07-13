@@ -93,8 +93,4 @@ contract euler is DSTest, stdCheats {
         
         USDC.approve(address(EulerProtocol), type(uint256).max);
     }
-
-    function profitSummary() public view returns (string memory) {
-        return Strings.append("FlashSyn: USDC=", USDC.balanceOf(address(attacker)));
-    }
 }

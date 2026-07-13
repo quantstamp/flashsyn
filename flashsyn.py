@@ -52,8 +52,9 @@ def _load_example(name):
     """Place the example's harness where forge expects it; return its setup dict.
 
     Every example is declarative: a manifest.toml (the action model) plus its
-    Solidity harness attack.t.sol (setUp / interfaces / profitSummary), which is
-    copied to where forge and the collector generator look.
+    Solidity harness attack.t.sol (setUp / interfaces), which is copied to where
+    forge and the collector generator look. The profit readout is derived from the
+    manifest (profit_tokens + token_info) and appended by the engine, not authored.
     """
     exdir = os.path.join(ROOT, "examples", name)
     if not os.path.isdir(exdir):

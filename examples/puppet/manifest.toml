@@ -1,7 +1,7 @@
 # Damn Vulnerable DeFi — Puppet (V1). Scenario is deployed locally in setUp(), so the
 # fork block is arbitrary (any archive block the RPC serves). Declarative benchmark:
 # the flashsyn CLI builds the action model from this file; the Solidity harness (with
-# setUp / interfaces / profitSummary) lives next to it in attack.t.sol.
+# setUp / interfaces) lives next to it in attack.t.sol.
 
 name = "puppet"
 contract = "Puppet"      # --match-contract name in attack.t.sol
@@ -10,7 +10,7 @@ block = 16818064
 max_synthesis_len = 3
 
 
-# Profit = (final - initial) * price over these, in profitSummary() output order.
+# Profit = (final - initial) * price over these, in profit readout order (see manifest._profit_readout).
 profit_tokens = ["DVT", "ETH"]
 
 # Attacker starts with 1000 DVT and 25 ETH — must match setUp() in attack.t.sol.

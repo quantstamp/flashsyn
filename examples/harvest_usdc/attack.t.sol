@@ -81,11 +81,4 @@ contract Harvest_USDC is DSTest, stdCheats {
         USDC.approve(address(CURVE), type(uint256).max);
         USDT.approve(address(fUSDT), type(uint256).max);
     }
-
-    // Profit is measured over both tokens; the parser reads the two integers after "FlashSyn".
-    function profitSummary() public view returns (string memory) {
-        return Strings.appendWithSpace(
-            Strings.append("FlashSyn: USDT=", USDT.balanceOf(address(attacker))),
-            Strings.append("USDC=", USDC.balanceOf(address(attacker))));
-    }
 }

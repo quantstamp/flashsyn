@@ -45,9 +45,21 @@ class ExtractPreambleTest(unittest.TestCase):
                                 "    function testExample0_() public { helper0_(1); }\n}"
         self._assert_is_the_preamble(generated, extract_preamble(generated))
 
-    def test_no_boundary_raises(self):
+    def test_preamble_only_harness_cut_at_closing_brace(self):
+        # A preamble-only harness (no testExample/helper — every example is now this
+        # shape, since the profit readout is generated too) has no boundary function.
+        # extract_preamble cuts at the contract's closing brace so the engine can append
+        # its own functions and re-close, rather than raising.
+        harness = _PREAMBLE + "}"
+        result = extract_preamble(harness)
+        self.assertEqual(result, _PREAMBLE)
+        self.assertNotIn("function testExample", result)
+
+    def test_no_closing_brace_raises(self):
+        # With neither a boundary function nor a closing brace there is nothing to
+        # slice, so fail loud instead of returning the whole malformed file.
         with self.assertRaises(ValueError):
-            extract_preamble(_PREAMBLE + "}")
+            extract_preamble("// SPDX\ncontract X {\n    uint x = 1;\n")
 
 
 class CheckPlaceholderCountTest(unittest.TestCase):

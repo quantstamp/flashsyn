@@ -18,7 +18,7 @@ block = 12345678           # fork block, just before the exploit
 max_synthesis_len = 5      # longest action sequence the synthesizer searches
 
 
-# Which tokens count toward profit, in the SAME ORDER your profitSummary() prints them.
+# Which tokens count toward profit, in the SAME ORDER the derived profit readout prints them.
 # profit = sum over these of (final_balance - initial_balance) * price.  (auto-derived)
 profit_tokens = ["TOKENA", "TOKENB"]
 

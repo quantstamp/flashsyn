@@ -5,7 +5,10 @@ that a hand-written model spelled out — initial balances, token prices, token
 metadata, and one entry per protocol action — are data here, and load() turns
 them into the same (wrapper, actions, dependencies) the engine drives. The
 Solidity harness (attack.t.sol) still lives next to the manifest, since setUp /
-interfaces / profitSummary are protocol-specific code, not config.
+interfaces are protocol-specific code, not config. The final profit readout is
+NOT in the harness: it's derived from profit_tokens + token_info (see
+_profit_readout) and appended by the engine, replacing a hand-authored
+profitSummary().
 
 Schema (see examples/harvest_usdt/manifest.toml):
 
@@ -14,7 +17,7 @@ Schema (see examples/harvest_usdt/manifest.toml):
     chain = "ETH"                # ETH | BSC | Fantom | Polygon
     block = 11129474             # fork block
     max_synthesis_len = 4
-    profit_tokens = ["USDT","USDC"]   # profitSummary() output order
+    profit_tokens = ["USDT","USDC"]   # profit readout order (see _profit_readout)
 
     [initial_balances]   USDT = 18308555.417594 ...
     [token_prices]       USDT = 1.0 ...
@@ -141,6 +144,29 @@ def _measures_for(action):
     return [(t, "gain") for t in action["tokens_out"]]
 
 
+def _balance_accessor(info):
+    """Solidity for the attacker's balance of a token. token_info[tok] = (var, decimals[, "native"]);
+    a 3rd element "native" -> address(attacker).balance, else <var>.balanceOf(address(attacker)).
+    One source for this native-vs-ERC20 distinction, shared by the collectors and the profit readout."""
+    native = len(info) > 2 and info[2] == "native"
+    return "address(attacker).balance" if native else "{}.balanceOf(address(attacker))".format(info[0])
+
+
+def _profit_readout(profit_tokens, token_info):
+    """Solidity that reverts the final profit readout, appended after the action sequence in the
+    synthesized attack (see ActionPro.buildAttackContract). Replaces a hand-authored profitSummary():
+    reads each profit token's final balance and reverts "FlashSyn: <tok>=<raw> ..." — the SAME marker
+    the parser (forge/forgeJson.py) reads for collectors, mapping values to positions by name and
+    scaling each by token_info decimals. Built directly with Strings (NOT the Collect helper) because
+    an action's own inline collect.spent/gained (Mode B, e.g. puppet's PoolBorrow) has already written
+    the shared buffer by this point; a fresh string keeps the readout to exactly the profit tokens."""
+    body = '        string memory _fsP = "FlashSyn:";\n'
+    for tok in profit_tokens:
+        body += '        _fsP = Strings.append(Strings.append(_fsP, " {}="), {});\n'.format(
+            tok, _balance_accessor(token_info[tok]))
+    return body + "        revert(_fsP);\n"
+
+
 def _make_inline_collector():
     """Collector for an action that records its own measurement inline in `solidity`
     (a collect.spent/gained(...) call — e.g. an internal value like borrow's _dep that
@@ -160,9 +186,7 @@ def _make_collect_collector(measures, token_info):
     def collectorStr(cls, _m=measures, _ti=token_info):
         reads, changes = "", ""
         for i, (tok, direction) in enumerate(_m):
-            info = _ti[tok]
-            native = len(info) > 2 and info[2] == "native"
-            acc = "address(attacker).balance" if native else "{}.balanceOf(address(attacker))".format(info[0])
+            acc = _balance_accessor(_ti[tok])
             reads += "        uint _fsC{} = {};\n".format(i, acc)
             # LOAD-BEARING order: these are uint subtractions in Solidity, which REVERT on
             # underflow (>=0.8). A gain has after > before, a spend has before > after, so we
@@ -193,9 +217,12 @@ def load(manifest_path):
         "TokenPrices": prices,
         "TargetTokens": list(prices.keys()),
         "tokenInfo": token_info,
-        # profitSummary()'s (token, decimals) order: the parser maps its named revert to
+        # The profit readout's (token, decimals) order: the parser maps its named revert to
         # positions and scales each raw balance by decimals, like the collectors.
         "profitTokens": [(t, token_info[t][1]) for t in m["profit_tokens"]],
+        # Solidity appended after the action sequence to revert the final profit readout
+        # (replaces a hand-authored profitSummary() in attack.t.sol). See _profit_readout.
+        "profitReadout": _profit_readout(m["profit_tokens"], token_info),
         "calcProfit": staticmethod(_make_calc_profit(m["profit_tokens"], initial, prices)),
     })
 

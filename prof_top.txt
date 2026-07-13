@@ -1,0 +1,58 @@
+=== TOP BY tottime (self CPU) ===
+Fri Jul 10 23:42:53 2026    /tmp/prof.out
+
+         2952911815 function calls (2717353858 primitive calls) in 633.539 seconds
+
+   Ordered by: internal time
+   List reduced from 9586 to 18 due to restriction <18>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+67889867/15828427  114.271    0.000  368.071    0.000 /flashsyn/src/Actions/AttackDAG.py:108(isSubDAGOfHelper)
+318990365/135584066   63.783    0.000   85.427    0.000 /flashsyn/src/Actions/AttackDAG.py:296(DAGSize)
+1244287691/1244282022   54.133    0.000   54.133    0.000 {built-in method builtins.len}
+ 67792033   51.670    0.000   64.477    0.000 /flashsyn/src/Actions/AttackDAG.py:456(find_matching_permutations)
+393038545   27.894    0.000   27.894    0.000 {method 'append' of 'list' objects}
+      169   26.683    0.158   26.683    0.158 {method 'poll' of 'select.poll' objects}
+ 13687798   25.866    0.000   66.087    0.000 /flashsyn/src/Actions/AttackDAG.py:60(composeParentsIndexMappings)
+ 15823272   20.362    0.000  466.590    0.000 /flashsyn/src/Actions/UtilsPrecision.py:240(__call__)
+ 15826518   18.203    0.000   30.097    0.000 /flashsyn/src/Actions/AttackDAG.py:250(extendInputs)
+ 25509216   15.222    0.000   44.393    0.000 /usr/local/lib/python3.12/site-packages/numpy/_core/numeric.py:2475(array_equal)
+ 18276462   14.519    0.000   15.736    0.000 /flashsyn/src/Actions/SingleApprox/SingleApprox.py:267(predict_single)
+ 28674106   13.477    0.000   13.477    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+ 13706196   12.687    0.000   15.568    0.000 /flashsyn/src/Actions/AttackDAG.py:39(composeIndexMappings)
+ 52340645   10.568    0.000   10.568    0.000 {built-in method numpy.asarray}
+ 15823343    9.633    0.000  388.160    0.000 /flashsyn/src/Actions/AttackDAG.py:222(setSimplifierExpander)
+123159432    9.184    0.000    9.185    0.000 {built-in method builtins.sum}
+ 15828427    7.942    0.000  376.716    0.000 /flashsyn/src/Actions/AttackDAG.py:190(isSubDAGOf)
+ 81616298    7.619    0.000    7.619    0.000 {method 'copy' of 'list' objects}
+
+
+=== TOP BY cumulative ===
+Fri Jul 10 23:42:53 2026    /tmp/prof.out
+
+         2952911815 function calls (2717353858 primitive calls) in 633.539 seconds
+
+   Ordered by: cumulative time
+   List reduced from 9586 to 18 due to restriction <18>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000  631.576  631.576 /flashsyn/src/synthesizer.py:134(synthesis)
+       38    0.005    0.000  604.122   15.898 /flashsyn/src/Actions/Utils.py:963(optimizeMiniMumOnce)
+        5    0.000    0.000  603.501  120.700 /flashsyn/src/synthesizer.py:521(_synthesis2)
+        5    0.000    0.000  603.501  120.700 /flashsyn/src/synthesizer.py:480(OptimizeMultiTraceSingleProcess2)
+       38    0.000    0.000  550.950   14.499 /flashsyn/src/vendored_shgo/_shgo.py:17(shgo)
+       38    0.000    0.000  550.921   14.498 /flashsyn/src/vendored_shgo/_shgo.py:716(construct_complex)
+       38    0.000    0.000  541.124   14.240 /flashsyn/src/vendored_shgo/_shgo.py:744(find_minima)
+       34    0.029    0.001  539.053   15.854 /flashsyn/src/vendored_shgo/_shgo.py:963(minimise_pool)
+     8760    0.065    0.000  538.383    0.061 /flashsyn/src/vendored_shgo/_shgo.py:1111(minimize)
+     8760    0.110    0.000  538.247    0.061 /usr/local/lib/python3.12/site-packages/scipy/optimize/_minimize.py:53(minimize)
+     8760    2.305    0.000  537.658    0.061 /usr/local/lib/python3.12/site-packages/scipy/optimize/_slsqp_py.py:216(_minimize_slsqp)
+ 15823272    4.487    0.000  471.078    0.000 /flashsyn/src/FlashSynProActions/ActionPro.py:175(simulate)
+ 15823272   20.362    0.000  466.590    0.000 /flashsyn/src/Actions/UtilsPrecision.py:240(__call__)
+ 15823343    9.633    0.000  388.160    0.000 /flashsyn/src/Actions/AttackDAG.py:222(setSimplifierExpander)
+ 15828427    7.942    0.000  376.716    0.000 /flashsyn/src/Actions/AttackDAG.py:190(isSubDAGOf)
+67889867/15828427  114.271    0.000  368.071    0.000 /flashsyn/src/Actions/AttackDAG.py:108(isSubDAGOfHelper)
+   626020    6.695    0.000  349.263    0.001 /usr/local/lib/python3.12/site-packages/scipy/optimize/_numdiff.py:277(approx_derivative)
+  3017186    3.409    0.000  323.186    0.000 /usr/local/lib/python3.12/site-packages/scipy/optimize/_numdiff.py:468(fun_wrapped)
+
+
