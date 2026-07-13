@@ -2,7 +2,7 @@
 """flashsyn — run a FlashSyn example without copying files or editing source.
 
 Usage (from the repo root):
-    python3 flashsyn.py compile    <example> [--fast-using-anvil]
+    python3 flashsyn.py compile    <example>                        # forge build (does it compile?)
     python3 flashsyn.py validate   <example> [--fast-using-anvil]   # smoke each action from the manifest
     python3 flashsyn.py deps       <example> [--fast-using-anvil]
     python3 flashsyn.py collect    <example> [--fast-using-anvil]
@@ -146,7 +146,7 @@ def main():
     config.processNum = jobs  # synthesize parallelises its per-trace shgo across this many
 
     anvil_proc = None
-    if use_anvil:
+    if use_anvil and cmd != "compile":   # `compile` is `forge build` — no fork needed
         # config.command is "./run.sh <contract> <chain> <block>" (set by the example).
         parts = config.command.split()
         chain, block = parts[2], parts[3]
@@ -160,7 +160,9 @@ def main():
 
     try:
         if cmd == "compile":
-            subprocess.run(config.command + " -vv", shell=True, cwd=FOUNDRY)
+            # A fast, name-accurate build check: does the harness (+ the libs) compile?
+            # No fork and no tests — `validate` runs the actions, `collect` needs the fork.
+            subprocess.run("forge build", shell=True, cwd=FOUNDRY)
         elif cmd == "validate":
             # Generate a per-action smoke harness from the manifest (no hand-written tests)
             # and run it: does each action execute from a token-flow prestate? See src/probe.py.
