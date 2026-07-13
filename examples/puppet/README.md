@@ -59,9 +59,8 @@ Parameters:          [999, 99999]
 ```
 
 i.e. dump 999 DVT to crash the oracle, then borrow 99,999 DVT out of the pool's 100k
-reserve for a negligible ETH deposit. `compile` also validates the whole exploit on-chain
-(`testExample2` reverts `FlashSyn: 100000 15`). Profit is the weighted metric
-`(DVT - 1000)*1 + (ETH - 25)*1000`.
+reserve for a negligible ETH deposit. `python3 flashsyn.py validate puppet` smoke-checks
+that each action executes. Profit is the weighted metric `(DVT - 1000)*1 + (ETH - 25)*1000`.
 
 Needs Foundry + the pinned Python stack + an archive RPC — the Docker image is the
 reliable environment (see the top-level README).

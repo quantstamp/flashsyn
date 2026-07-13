@@ -92,17 +92,7 @@ contract Template is DSTest, stdCheats {
             Strings.append("TOKENB=", TOKENB.balanceOf(address(attacker))));
     }
 
-    // ---- Everything above is the "preamble" the engine reads. Everything below is
-    // ---- only for `flashsyn.py compile` (sanity) and `deps` (dependency graph); the
-    // ---- collectors used by collect/synthesize are generated from the manifest.
-
-    // TODO 5. (Optional) one testExample per action: run just that action between the
-    // separators, prefixed by anything it depends on. End with revert(""). You can omit
-    // these — synthesis doesn't need them — but they let `compile`/`deps` validate.
-    function testExample0() public {
-        emit log("=================== Separator ==================");
-        // POOL.exchange(0, 1, 1000000 * 1e6, 0);
-        emit log("=================== Separator ==================");
-        revert("");
-    }
+    // This whole contract is the "preamble" the engine reads; it needs NO testExample
+    // functions. The CLI generates everything from the manifest: the collectors
+    // (collect/synthesize) and the per-action smoke tests (`flashsyn.py validate`).
 }

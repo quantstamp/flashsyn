@@ -13,10 +13,10 @@ examples/<your-name>/
 
 **You write:**
 
-1. **`attack.t.sol`** — protocol-specific Solidity: interfaces, contract addresses, a
+1. **`attack.t.sol`** — protocol-specific Solidity **only**: interfaces, contract addresses, a
    `setUp()` that funds the attacker with the flash-loan capital and sets approvals, and a
-   `profitSummary()` that prints the profit-token balances. (Optional `testExample`
-   functions let `compile`/`deps` validate.)
+   `profitSummary()` that prints the profit-token balances. No test functions — the CLI
+   generates the collectors and the per-action smoke tests (`flashsyn.py validate`) from the manifest.
 2. **`manifest.toml`** — the search config: chain/block/contract, initial balances, token
    prices, `token_info`, and one `[[actions]]` entry per action (`tokens_in/out`, `range`,
    and the one Solidity snippet).

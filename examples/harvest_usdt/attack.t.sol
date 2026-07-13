@@ -89,37 +89,4 @@ contract Harvest_USDT is DSTest, stdCheats {
             Strings.append("FlashSyn: USDT=", USDT.balanceOf(address(attacker))),
             Strings.append("USDC=", USDC.balanceOf(address(attacker))));
     }
-
-    function testExample0() public {
-        emit log("=================== Separator ==================");
-        // Action: Curve_USDT2USDC
-        CURVE.exchange_underlying(2, 1, 17000000 * 1e6, 0);
-        emit log("=================== Separator ==================");
-        revert("");
-    }
-
-    function testExample1() public {
-        emit log("=================== Separator ==================");
-        // Action: Curve_USDC2USDT
-        CURVE.exchange_underlying(1, 2, 17000000 * 1e6, 0);
-        emit log("=================== Separator ==================");
-        revert("");
-    }
-
-    function testExample2() public {
-        emit log("=================== Separator ==================");
-        // Action: fUSDC_deposit
-        fUSDC.deposit(49000000 * 1e6);
-        emit log("=================== Separator ==================");
-        revert("");
-    }
-
-    function testExample3() public {
-        fUSDC.deposit(49000000 * 1e6);
-        emit log("=================== Separator ==================");
-        // Action: fUSDC_withdraw
-        fUSDC.withdraw(49000000 * 1e6);
-        emit log("=================== Separator ==================");
-        revert("");
-    }
 }

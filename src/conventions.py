@@ -49,11 +49,17 @@ def extract_preamble(harness_text):
     generated collectors to a full contract and fail to compile cryptically.
     """
     cuts = [i for i in (harness_text.find(m) for m in PREAMBLE_BOUNDARIES) if i != -1]
-    if not cuts:
+    if cuts:
+        return harness_text[:min(cuts)]
+    # A preamble-only harness (no hand-written testExample functions): the test contract is
+    # the last contract in the file, so its closing brace is the file's last `}`. Cut there
+    # so the engine can append its own generated functions and re-close the contract.
+    last = harness_text.rfind("}")
+    if last == -1:
         raise ValueError(
-            "harness has no {} function; cannot locate the preamble boundary".format(
-                " / ".join(PREAMBLE_BOUNDARIES)))
-    return harness_text[:min(cuts)]
+            "harness has no {} function and no closing brace; cannot locate the preamble "
+            "boundary".format(" / ".join(PREAMBLE_BOUNDARIES)))
+    return harness_text[:last]
 
 
 def check_placeholder_count(action_name, snippet, num_inputs):

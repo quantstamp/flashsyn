@@ -176,6 +176,14 @@ def main():
             out = subprocess.run(command, shell=True, cwd=FOUNDRY, capture_output=True)
             probe.report(out.stdout, idx)
         elif cmd == "deps":
+            # Harnesses are preamble-only, so generate the dependency probes from the
+            # manifest (one per action, bracketed by separators) before dependencyCheck reads them.
+            import probe
+            from conventions import extract_preamble
+            with open(HARNESS_DEST) as f:
+                preamble = extract_preamble(f.read())
+            with open(HARNESS_DEST, "w") as f:
+                f.write(probe.build_deps_harness(preamble, setup["actions"], setup["wrapper"].initialBalances))
             subprocess.run([sys.executable, os.path.join(ROOT, "src", "dependencyCheck.py"), config.command])
         elif cmd == "collect":
             w = setup["wrapper"]

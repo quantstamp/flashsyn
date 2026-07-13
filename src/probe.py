@@ -14,38 +14,35 @@ this up", not a bug in the action.
 import json
 import re
 
+from conventions import SEPARATOR_TEXT
+
 PROBE_MARKER = "PROBE_OK"
 _TEST = re.compile(r"testExample(\d+)")
+_SEP = '        emit log("{}");\n'.format(SEPARATOR_TEXT)
 
 
-# Fractions of the search range to probe, expressed as span divisors, from tiny (span/1000)
-# to mid (span/2). The amount an action can actually execute at depends on how much its
-# prefix produced — which we can't predict from the manifest — so we spread across several
-# orders of magnitude and take the first value that runs. We deliberately DON'T probe the
-# range's high end: an action consuming a produced token (burn, donate) holds far less than
-# the range top, so a large value just reverts (amount-too-large / insufficient-balance).
-_PROBE_SPAN_DIVISORS = (1000, 100, 4, 2)
+# Points to probe, as FRACTIONS of the [lo, hi] range: both boundaries (0.0 -> lo, 1.0 -> hi)
+# and a spread of interior values. Using fractions means every candidate is in range by
+# construction — no hardcoded amount that could fall outside [lo, hi]. Ordered small-first
+# and we take the first value that executes, so the small fractions do the work: an action
+# consuming a produced token (burn/donate) holds far less than the range top, so only a small
+# amount runs, while lo (often a no-op) and hi (often too large) just document the boundaries.
+_PROBE_FRACTIONS = (0.0, 0.001, 0.01, 0.1, 0.5, 1.0)
 
 
 def _probe_values(action):
-    """In-range values to try, tiny -> mid (or [None] for a 0-input action like touch)."""
+    """In-range values to try (or [None] for a 0-input action like touch)."""
     r = list(getattr(action, "range", []) or [])
     if getattr(action, "numInputs", 0) == 0 or len(r) != 2:
         return [None]
     lo, hi = r
     span = hi - lo
-    # `$$` is a WHOLE-TOKEN amount substituted as an integer literal (the action Solidity
-    # scales it, e.g. `$$ * 1e18`, and Solidity has no floats), so `lo + 1` is 1 whole token
-    # — the smallest amount that does something (lo is usually 0, which no-ops or reverts).
-    # This is valid as long as $$ follows that whole-token convention and 1 token clears any
-    # protocol minimum; if not, the action shows up as FAILS with the real revert reason.
-    # max(1, ...) keeps every divisor candidate above lo even when the span is tiny.
-    cands = [lo + 1] + [lo + max(1, span // d) for d in _PROBE_SPAN_DIVISORS]
     out = []
-    for v in cands:
-        if lo < v <= hi and v not in out:     # in range and de-duplicated (keep first/smallest)
+    for f in _PROBE_FRACTIONS:
+        v = lo + int(span * f)                # in [lo, hi] since f in [0, 1]
+        if v not in out:                      # de-duplicate (tiny spans collapse to a few)
             out.append(v)
-    return out or [hi]                        # degenerate range (lo == hi): fall back to hi
+    return out
 
 
 def _mid_value(action):
@@ -80,6 +77,32 @@ def _prefix(action, actions, initial):
         if not progressed:
             break
     return seq
+
+
+def _deps_value(action):
+    """A single small in-range value for a deps probe (the target must execute, and small
+    amounts tend to)."""
+    vals = _probe_values(action)
+    if vals == [None]:
+        return None
+    nonzero = [v for v in vals if v != 0]
+    return nonzero[0] if nonzero else vals[0]
+
+
+def build_deps_harness(preamble, actions, initial_balances):
+    """A dependency-probe harness for `deps`: one testExample per action = a token-flow
+    prefix then the target action bracketed by SEPARATOR logs (dependencyCheck.py diffs the
+    storage each action touches between the separators). Concrete values are best-effort
+    (a small amount that tends to execute); an action needing state the manifest can't set
+    up produces no useful trace, same as a mis-written hand-authored probe would."""
+    fns = []
+    for i, action in enumerate(actions):
+        prefix = _prefix(action, actions, set(initial_balances))
+        body = "".join("    " + _concrete(a, _deps_value(a)) for a in prefix)
+        body += _SEP + "    " + _concrete(action, _deps_value(action)) + _SEP
+        body += '        revert("");\n'
+        fns.append("    function testExample{}() public {{\n{}    }}\n".format(i, body))
+    return preamble + "\n" + "".join(fns) + "\n}\n"
 
 
 def build_validate_harness(preamble, actions, initial_balances):
