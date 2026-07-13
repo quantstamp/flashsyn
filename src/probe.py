@@ -34,8 +34,12 @@ def _probe_values(action):
         return [None]
     lo, hi = r
     span = hi - lo
-    # lo + 1 is the smallest legal value (some actions revert at 0); then the divisor spread.
-    # max(1, ...) keeps every candidate above lo even when the span is tiny.
+    # `$$` is a WHOLE-TOKEN amount substituted as an integer literal (the action Solidity
+    # scales it, e.g. `$$ * 1e18`, and Solidity has no floats), so `lo + 1` is 1 whole token
+    # — the smallest amount that does something (lo is usually 0, which no-ops or reverts).
+    # This is valid as long as $$ follows that whole-token convention and 1 token clears any
+    # protocol minimum; if not, the action shows up as FAILS with the real revert reason.
+    # max(1, ...) keeps every divisor candidate above lo even when the span is tiny.
     cands = [lo + 1] + [lo + max(1, span // d) for d in _PROBE_SPAN_DIVISORS]
     out = []
     for v in cands:
