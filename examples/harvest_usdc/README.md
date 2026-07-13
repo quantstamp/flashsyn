@@ -57,7 +57,7 @@ real `masterMinter`, USDT funded by a direct balance-slot write (slot 2) with a
 > 3.12 + vendored shgo). Data collection: 1,637 points / 65 pkl files (~134s).
 > Synthesis (maxSynthesisLen=4, Pruning + CounterExampleLoop) rediscovers the exploit:
 > **`Curve_USDC2USDT → fUSDT_deposit → Curve_USDT2USDC → fUSDT_withdraw`**, params
-> `[8240307, 46354980, 7363174, 47955515]`, **estimated profit 104,699 ≈ actual
-> on-chain profit 100,111** (1001 concrete executions succeeded). Here the optimizer
-> found ~46M-scale trades, close to the attacker's ~50M; validated profit is ~100K vs
-> the historical ~338K.
+> `[10312128, 26235376, 11378564, 27205623]`, **actual on-chain profit 104,101**. The vector
+> matches the historical attack; validated profit is ~104K vs the historical ~338K. (Profit
+> and params shift slightly from earlier reports because token decimals are now scaled as a
+> float in Python — the pre-float, truncated run reported 100,111.)

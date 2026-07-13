@@ -63,7 +63,8 @@ pre-funded with the loan amounts in `setUp()`.
 > 3.12 + vendored shgo). Data collection: 1,931 points / 65 pkl files (~135s).
 > Synthesis (maxSynthesisLen=4, Pruning + CounterExampleLoop) rediscovers the exploit:
 > **`Curve_USDT2USDC → fUSDC_deposit → Curve_USDC2USDT → fUSDC_withdraw`**, params
-> `[17089774, 17624463, 15666845, 18223614]`, **estimated profit 65,296 ≈ actual
-> on-chain profit 66,764** (72 concrete executions succeeded). The vector matches the
-> historical attack; the validated profit is smaller than the historical ~307K because
-> the optimizer settled on ~17M-scale trades rather than the attacker's ~50M.
+> `[15121256, 37580469, 13678642, 38758246]`, **actual on-chain profit 67,939**. The vector
+> matches the historical attack; the validated profit is smaller than the historical ~307K
+> because the optimizer settled on mid-scale trades rather than the attacker's ~50M. (Profit
+> and params shift slightly from earlier reports because token decimals are now scaled as a
+> float in Python — the pre-float, truncated run reported 66,764.)
