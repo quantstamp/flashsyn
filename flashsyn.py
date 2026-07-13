@@ -4,7 +4,7 @@
 Usage (from the repo root):
     python3 flashsyn.py compile    <example>                        # forge build (does it compile?)
     python3 flashsyn.py validate   <example> [--fast-using-anvil]   # smoke each action from the manifest
-    python3 flashsyn.py deps       <example> [--fast-using-anvil]
+    python3 flashsyn.py deps       <example> [--fast-using-anvil]   # diagnostic only (see dependencyCheck.py)
     python3 flashsyn.py collect    <example> [--fast-using-anvil]
     python3 flashsyn.py synthesize <example> [--fast-using-anvil] [--jobs N]
 
@@ -178,8 +178,11 @@ def main():
             out = subprocess.run(command, shell=True, cwd=FOUNDRY, capture_output=True)
             probe.report(out.stdout, idx)
         elif cmd == "deps":
-            # Harnesses are preamble-only, so generate the dependency probes from the
-            # manifest (one per action, bracketed by separators) before dependencyCheck reads them.
+            # DIAGNOSTIC ONLY: prints a storage read/write dependency graph that nothing
+            # consumes — collect/synthesize use the manifest's all-others default regardless.
+            # Kept for future work (shorter prefixes + search pruning by grouping independent
+            # actions); see src/dependencyCheck.py's module docstring. Harnesses are
+            # preamble-only, so generate the probes (one per action, bracketed by separators).
             import probe
             from conventions import extract_preamble
             with open(HARNESS_DEST) as f:

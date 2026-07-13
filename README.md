@@ -68,8 +68,9 @@ between collection and synthesis:
 ```sh
 python3 -m pip install -r requirements.txt   # prerequisites: Foundry + Python deps
 
-python3 flashsyn.py compile    <name>        # compile the harness against the fork
-python3 flashsyn.py deps       <name>        # (optional) action dependency graph
+python3 flashsyn.py compile    <name>        # forge build — does the harness compile?
+python3 flashsyn.py validate   <name>        # smoke-check each action runs (from the manifest)
+python3 flashsyn.py deps       <name>        # diagnostic: print a dependency graph (not yet consumed)
 python3 flashsyn.py collect    <name>        # collect initial data points
 python3 flashsyn.py synthesize <name> > run.log
 ```

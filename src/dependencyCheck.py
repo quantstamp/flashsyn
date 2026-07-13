@@ -5,6 +5,28 @@ scrapes the addresses each action touches; pass 2 (collectAccessInfo) inserts
 vm.record()/vm.accesses() and scrapes the read/write storage slots. Two actions are
 dependent when one reads a slot the other writes.
 
+======================================================================================
+STATUS: NOT WIRED INTO THE PIPELINE (diagnostic-only, kept for future work).
+--------------------------------------------------------------------------------------
+`flashsyn.py deps <example>` runs this and PRINTS the dependency graph, but nothing
+consumes it. collect/synthesize always use the manifest's conservative default —
+`dependencies = all-others` (every action's prestate assumes every other action; see
+manifest.load). This module is a leftover from the pre-manifest workflow where a human
+read the graph and hand-tuned the dependency list.
+
+WHAT IT'S FOR / SHOULD BE. The graph is a read-after-write PARTIAL ORDER over the actions
+(A depends on B iff A reads a storage slot B writes). Feeding it back would let the engine:
+  * shorten collection prefixes — run only the actions an action truly depends on, instead
+    of all-others (the initialPass BFS in initialPassCollectData); and
+  * prune the search by GROUPING actions — actions with no dependency between them COMMUTE,
+    so only one ordering of an independent group matters (skip the k! permutations), while
+    a dependent pair (B -> A) is an ordering worth searching. This is the lever that makes
+    the search scale from a handful of actions to many.
+TO WIRE IT UP: persist the graph (e.g. deps.json next to the manifest) and have manifest.load
+(or the Synthesizer / AttackDAG) read it in place of the all-others default. Until then,
+`deps` output is for human eyes only and does not affect collect/synthesize results.
+======================================================================================
+
 Modernised for forge >= 1.x. The 2021-era code scraped ANSI-coloured `-vvv` text; a
 piped modern forge emits no colour, so this parses the plain decoded `-vvvv` trace
 instead. The load-bearing details (all learned the hard way against forge 1.7.1) are
