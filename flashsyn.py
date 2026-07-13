@@ -3,6 +3,7 @@
 
 Usage (from the repo root):
     python3 flashsyn.py compile    <example> [--fast-using-anvil]
+    python3 flashsyn.py validate   <example> [--fast-using-anvil]   # smoke each action from the manifest
     python3 flashsyn.py deps       <example> [--fast-using-anvil]
     python3 flashsyn.py collect    <example> [--fast-using-anvil]
     python3 flashsyn.py synthesize <example> [--fast-using-anvil] [--jobs N]
@@ -131,7 +132,7 @@ def _parse_args(args):
         jobs = max(1, min(int(jobs), os.cpu_count() or 1))
     except ValueError:
         sys.exit("--jobs takes an integer")
-    if len(positional) != 2 or positional[0] not in ("compile", "deps", "collect", "synthesize"):
+    if len(positional) != 2 or positional[0] not in ("compile", "validate", "deps", "collect", "synthesize"):
         sys.exit(__doc__)
     return positional[0], positional[1], use_anvil, jobs
 
@@ -160,6 +161,20 @@ def main():
     try:
         if cmd == "compile":
             subprocess.run(config.command + " -vv", shell=True, cwd=FOUNDRY)
+        elif cmd == "validate":
+            # Generate a per-action smoke harness from the manifest (no hand-written tests)
+            # and run it: does each action execute from a token-flow prestate? See src/probe.py.
+            import probe
+            from conventions import extract_preamble
+            with open(HARNESS_DEST) as f:
+                preamble = extract_preamble(f.read())
+            harness, idx = probe.build_validate_harness(
+                preamble, setup["actions"], setup["wrapper"].initialBalances)
+            with open(HARNESS_DEST, "w") as f:
+                f.write(harness)
+            command = config.command if "--json" in config.command else config.command + " --json"
+            out = subprocess.run(command, shell=True, cwd=FOUNDRY, capture_output=True)
+            probe.report(out.stdout, idx)
         elif cmd == "deps":
             subprocess.run([sys.executable, os.path.join(ROOT, "src", "dependencyCheck.py"), config.command])
         elif cmd == "collect":
