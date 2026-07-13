@@ -60,6 +60,8 @@ collect.spent/gained("<tok>", value) call; the engine then only appends collect.
 tokens_in / tokens_out always describe token FLOW for the search graph, independent of the
 above; annotate them by direction even when effects invert the magnitude bookkeeping.
 """
+import json
+import os
 import tomllib
 
 import config
@@ -202,6 +204,53 @@ def _make_collect_collector(measures, token_info):
     return collectorStr
 
 
+def _load_dependencies(manifest_path, actions):
+    """The per-action prestate dependency list-of-lists (index i -> deps of actions[i]).
+
+    Each entry is [dependency action classes...] + [the action itself]. The self-entry is
+    load-bearing: the DAG builder (AttackDAG.generateDAG) matches a dependency against
+    EARLIER positions in a candidate trace, so listing the action itself wires an edge
+    between repeated occurrences of it (deposit then deposit).
+
+    If a deps.json (read-after-write graph from `flashsyn.py deps <ex> --write`, see
+    dependencyCheck.py) sits next to the manifest, build the list from it: each action
+    depends only on the actions that write a slot it reads. Otherwise use the all-others
+    default (every action depends on every other), which is SOUND — it never prunes a real
+    prefix, at the cost of longer collection prefixes and more search orderings.
+
+    A pruned graph is only as complete as the storage trace it came from (a data-dependent
+    write the probe didn't trigger yields a missing edge), so consuming deps.json trades
+    soundness for speed and is opt-in by its presence. Validation is strict: the artifact
+    must name exactly the manifest's actions, and every dependency must be a known action —
+    a stale deps.json fails loud rather than silently pruning the wrong prefixes.
+    """
+    by_name = {a.__name__: a for a in actions}
+    deps_path = os.path.join(os.path.dirname(manifest_path), "deps.json")
+    if not os.path.isfile(deps_path):
+        print("[deps] no deps.json next to the manifest; using the all-others default "
+              "({} actions)".format(len(actions)))
+        return [[b for b in actions if b is not a] + [a] for a in actions]
+
+    with open(deps_path) as f:
+        depends_on = json.load(f).get("depends_on", {})
+    if set(depends_on) != set(by_name):
+        raise ValueError(
+            "deps.json ({}) does not name exactly the manifest's actions ({}); regenerate "
+            "with `flashsyn.py deps <example> --write`".format(sorted(depends_on), sorted(by_name)))
+
+    dependencies, edges = [], 0
+    for a in actions:
+        dep_names = depends_on[a.__name__]
+        unknown = [d for d in dep_names if d not in by_name]
+        if unknown:
+            raise ValueError("deps.json: action {} depends on unknown action(s) {}; regenerate "
+                             "with `flashsyn.py deps <example> --write`".format(a.__name__, unknown))
+        dependencies.append([by_name[d] for d in dep_names] + [a])
+        edges += len(dep_names)
+    print("[deps] using deps.json ({} read-after-write edges across {} actions)".format(edges, len(actions)))
+    return dependencies
+
+
 def load(manifest_path):
     """Read a manifest.toml and return {wrapper, actions, dependencies, max_len}."""
     with open(manifest_path, "rb") as f:
@@ -260,8 +309,7 @@ def load(manifest_path):
     config.command = "./run.sh {} {} {}".format(m["contract"], m["chain"], m["block"])
     config.benchmarkName = m["name"]
 
-    # Safe default: every action's prestate may be reached by running all the others.
-    dependencies = [[b for b in actions if b is not a] + [a] for a in actions]
+    dependencies = _load_dependencies(manifest_path, actions)
     AttackDAGGenerator.setActionDependency(generateActionDependency(actions, dependencies))
 
     return {"wrapper": wrapper, "actions": actions, "dependencies": dependencies,

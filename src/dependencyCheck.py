@@ -6,25 +6,26 @@ vm.record()/vm.accesses() and scrapes the read/write storage slots. Two actions 
 dependent when one reads a slot the other writes.
 
 ======================================================================================
-STATUS: NOT WIRED INTO THE PIPELINE (diagnostic-only, kept for future work).
---------------------------------------------------------------------------------------
-`flashsyn.py deps <example>` runs this and PRINTS the dependency graph, but nothing
-consumes it. collect/synthesize always use the manifest's conservative default —
-`dependencies = all-others` (every action's prestate assumes every other action; see
-manifest.load). This module is a leftover from the pre-manifest workflow where a human
-read the graph and hand-tuned the dependency list.
+STATUS: OPT-IN. `flashsyn.py deps <example> --write` calls compute_graph() and persists
+the graph to examples/<example>/deps.json; when that file is present, manifest.load builds
+the per-action dependency list from it instead of the conservative all-others default
+(every action's prestate assumes every other action). Without deps.json, collect/synthesize
+are unchanged. `flashsyn.py deps <example>` (no --write) just prints the graph.
 
-WHAT IT'S FOR / SHOULD BE. The graph is a read-after-write PARTIAL ORDER over the actions
-(A depends on B iff A reads a storage slot B writes). Feeding it back would let the engine:
+WHAT IT'S FOR. The graph is a read-after-write PARTIAL ORDER over the actions (A depends on
+B iff A reads a storage slot B writes). Consuming it lets the engine:
   * shorten collection prefixes — run only the actions an action truly depends on, instead
     of all-others (the initialPass BFS in initialPassCollectData); and
   * prune the search by GROUPING actions — actions with no dependency between them COMMUTE,
     so only one ordering of an independent group matters (skip the k! permutations), while
     a dependent pair (B -> A) is an ordering worth searching. This is the lever that makes
     the search scale from a handful of actions to many.
-TO WIRE IT UP: persist the graph (e.g. deps.json next to the manifest) and have manifest.load
-(or the Synthesizer / AttackDAG) read it in place of the all-others default. Until then,
-`deps` output is for human eyes only and does not affect collect/synthesize results.
+
+SOUNDNESS. The all-others default is SOUND (never prunes a real prefix). This graph is only
+as complete as the storage trace it came from: an action whose writes are data-dependent on
+a branch the probe didn't take can be MISSING an edge, so a pruned prefix could skip a real
+attack. That is why consuming deps.json is opt-in by its presence — you generate it on
+purpose — and why the consumer keeps a conservative self-edge (see manifest._load_dependencies).
 ======================================================================================
 
 Modernised for forge >= 1.x. The 2021-era code scraped ANSI-coloured `-vvv` text; a
@@ -295,16 +296,17 @@ def collectAccessInfo(command, ActionLists):
                     "dependencyCheck Error: ActionList1 relatedAddresses and ActionList2 relatedAddresses are different")
 
         for relatedAddress in ActionList1[ii].relatedAddresses:
-            temp = []
-            for storage in ActionList1[ii].readMap[relatedAddress]:
-                if storage in ActionList2[ii].readMap[relatedAddress]:
-                    temp.append(storage)
-            ActionLists[ii].readMap[relatedAddress] = temp
-            temp = []
-            for storage in ActionList1[ii].writeMap[relatedAddress]:
-                if storage in ActionList2[ii].writeMap[relatedAddress]:
-                    temp.append(storage)
-            ActionLists[ii].writeMap[relatedAddress] = temp
+            # A related address (scraped from the trace) may have no read/write entry if no
+            # VM::accesses line was captured for it in this section — treat that as "no slots
+            # touched" (.get default) rather than crashing. It contributes no dependency edge,
+            # consistent with the graph's documented soundness caveat (missing data -> missing
+            # edge, never a false one).
+            read1 = ActionList1[ii].readMap.get(relatedAddress, [])
+            read2 = ActionList2[ii].readMap.get(relatedAddress, [])
+            ActionLists[ii].readMap[relatedAddress] = [s for s in read1 if s in read2]
+            write1 = ActionList1[ii].writeMap.get(relatedAddress, [])
+            write2 = ActionList2[ii].writeMap.get(relatedAddress, [])
+            ActionLists[ii].writeMap[relatedAddress] = [s for s in write1 if s in write2]
 
     return ActionLists
 
@@ -370,54 +372,76 @@ def collectAccessInfoOnce(command, ActionLists):
 
 
 def findReadWriteDependency(ActionList, verbose=False):
-    Dependencies = []
+    """Build the read-after-write dependency graph from the per-action storage maps.
+
+    Action ii depends on jj iff ii READS a storage slot (at a shared address) that jj
+    WRITES. Returns (depends_on, key_addresses):
+      depends_on[name]    = [names of actions this action depends on]
+      key_addresses[name] = {dep_name: [addresses where the read-after-write overlaps]}
+    Keyed by StorageAccess.funcName, which callers set to the manifest action name (via
+    executeAndParseRelevantAddresses' overideFuncName) so the graph matches the manifest.
+    Self-dependency (ii == jj) is not computed here; the consumer adds the self-edge.
+    Also prints the graph — this is the human-facing `deps` diagnostic.
+    """
+    depends_on = {a.funcName: [] for a in ActionList}
+    key_addresses = {a.funcName: {} for a in ActionList}
     for ii in range(0, len(ActionList)):
-        Dependencies.append([])
+        name_ii = ActionList[ii].funcName
         for jj in range(0, len(ActionList)):
             if ii == jj:
                 continue
             keyAddresses = []
             for address in ActionList[ii].relatedAddresses:
                 if address in ActionList[jj].relatedAddresses:
-                    for storage in ActionList[ii].readMap[address]:
-                        if storage in ActionList[jj].writeMap[address]:
-
+                    writes_jj = ActionList[jj].writeMap.get(address, [])
+                    for storage in ActionList[ii].readMap.get(address, []):
+                        if storage in writes_jj:
                             if address not in keyAddresses:
                                 keyAddresses.append(address)
-
             if len(keyAddresses) != 0:
-                Dependencies[ii].append((ActionList[jj], keyAddresses))
+                name_jj = ActionList[jj].funcName
+                depends_on[name_ii].append(name_jj)
+                key_addresses[name_ii][name_jj] = keyAddresses
 
-    for ii in range(len(Dependencies)):
-        if len(Dependencies[ii]) == 0:
-            print("Action {} has no dependency".format(
-                ActionList[ii].funcName))
+    for action in ActionList:
+        deps = depends_on[action.funcName]
+        if len(deps) == 0:
+            print("Action {} has no dependency".format(action.funcName))
         else:
-            print("Action {} has {} relevant actions: ".format(
-                ActionList[ii].funcName, len(Dependencies[ii])), end="")
-            for jj in range(len(Dependencies[ii])):
-                print(Dependencies[ii][jj][0].funcName, end=" ")
-            print("")
-
+            print("Action {} has {} relevant actions: {}".format(
+                action.funcName, len(deps), " ".join(deps)))
         if verbose:
-            for jj in range(len(Dependencies[ii])):
-                print("Action {} depends on Action {}".format(
-                    ActionList[ii].funcName, Dependencies[ii][jj][0].funcName))
-                print("key addresses: {}".format(Dependencies[ii][jj][1]))
-                print("")
+            for dep in deps:
+                print("Action {} depends on Action {}\nkey addresses: {}\n".format(
+                    action.funcName, dep, key_addresses[action.funcName][dep]))
+
+    return depends_on, key_addresses
+
+
+def compute_graph(command, action_names=None):
+    """Run the two-pass storage analysis and return the dependency graph.
+
+    Returns {"depends_on": {name: [names]}, "key_addresses": {name: {dep: [addrs]}}}.
+    `action_names` are the manifest action names in harness order (testExample i brackets
+    actions[i]); passing them labels the graph with manifest names instead of the
+    trace-scraped funcName, so the artifact's keys line up with the manifest. Reads and
+    rewrites the harness at src/foundryModule/src/test/attack.t.sol in place.
+    """
+    outputActions = executeAndParseRelevantAddresses(command, overideFuncName=action_names)
+    modifyAttackTestFile(outputActions)
+    ActionList = collectAccessInfo(command, outputActions)
+    depends_on, key_addresses = findReadWriteDependency(ActionList)
+    return {"depends_on": depends_on, "key_addresses": key_addresses}
 
 
 if __name__ == "__main__":
 
     # Pass the full forge run command as a single argument, e.g.:
     #   python3 src/dependencyCheck.py "./run.sh euler ETH 16818064 -vvv"
+    # Prints the graph labelled by scraped funcName (no manifest names available here).
+    # `flashsyn.py deps <example> [--write]` calls compute_graph() in-process with the
+    # manifest names and can persist the artifact.
     if len(sys.argv) < 2:
         sys.exit("Usage: python3 dependencyCheck.py \"<run command>\"\n"
                  "  e.g. python3 dependencyCheck.py \"./run.sh euler ETH 16818064 -vvv\"")
-    command = sys.argv[1]
-    overrideFuncNames = []
-
-    outputActions = executeAndParseRelevantAddresses(command)
-    modifyAttackTestFile(outputActions)
-    ActionList = collectAccessInfo(command, outputActions)
-    findReadWriteDependency(ActionList)
+    compute_graph(sys.argv[1])
