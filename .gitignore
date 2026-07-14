@@ -8,6 +8,11 @@ venv/
 src/foundryModule/out/
 src/foundryModule/cache/
 
+# Engine-generated harness (the example's attack.t.sol is copied here + collectors
+# appended on every run; the source of truth is examples/<name>/attack.t.sol).
+src/foundryModule/src/test/attack.t.sol
+src/foundryModule/src/attack.sol
+
 # FlashSyn generated data / logs
 initialDataPoints/
 *Log.txt
