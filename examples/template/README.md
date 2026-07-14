@@ -27,8 +27,8 @@ examples/<your-name>/
 - the **data collector** — generated from `tokens_out`/`effects` + `token_info`, emitted through the harness's `Collect` helper.
 - the **balance transition** (`transit`) — generated from `tokens_in`/`tokens_out` (override with `effects`).
 - `calcProfit` — derived from `profit_tokens` + balances + prices.
-- the **action dependency graph** — a conservative all-others default (`deps` can print a
-  storage-based graph, but it's diagnostic-only — nothing consumes it yet).
+- the **action dependency graph** — a conservative all-others default, unless you drop a
+  hand-written `deps.json` next to the manifest to narrow it (see docs/deps.md).
 - no file copying, no source editing to switch collection vs. synthesis.
 
 ## Run flow (from the repo root)
@@ -38,8 +38,10 @@ python3 flashsyn.py compile    <your-name>   # forge build — does the harness 
 python3 flashsyn.py validate   <your-name>   # smoke-check each action runs (generated from the manifest)
 python3 flashsyn.py collect    <your-name>   # sample the actions -> initialDataPoints/<name>/
 python3 flashsyn.py synthesize <your-name> > run.log
-python3 flashsyn.py deps       <your-name>   # diagnostic only: print a dependency graph (not consumed)
 ```
+
+Optional: a hand-written `deps.json` next to the manifest narrows the search from the
+all-others default and is auto-loaded when present — see `docs/deps.md`.
 
 `validate` is the quick "does each action even run" check — it generates a per-action smoke
 harness from the manifest (no test functions in `attack.t.sol`) and reports RUNS/FAILS.

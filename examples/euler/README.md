@@ -35,10 +35,13 @@ source:
 
 ```sh
 python3 flashsyn.py compile    euler        # compile the harness against the fork
-python3 flashsyn.py deps       euler        # (optional) action dependency graph
 python3 flashsyn.py collect    euler        # collect initial data points (~9 min)
 python3 flashsyn.py synthesize euler > run.log   # counter-example synthesis
 ```
+
+This example ships a hand-written `deps.json` (an action dependency graph that narrows the
+search from the all-others default); it is auto-loaded by `collect`/`synthesize`. See
+`docs/deps.md` for the format.
 
 Expected result: FlashSyn rediscovers the exploit — best vector
 `eulerDeposit → eulerMint → eulerDonate → eulerLiquidateWithdraw`, **Best Profit 22,415,806**

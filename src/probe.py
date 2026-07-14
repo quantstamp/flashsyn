@@ -14,11 +14,8 @@ this up", not a bug in the action.
 import json
 import re
 
-from conventions import SEPARATOR_TEXT
-
 PROBE_MARKER = "PROBE_OK"
 _TEST = re.compile(r"testExample(\d+)")
-_SEP = '        emit log("{}");\n'.format(SEPARATOR_TEXT)
 
 
 # Points to probe, as FRACTIONS of the [lo, hi] range: both boundaries (0.0 -> lo, 1.0 -> hi)
@@ -77,32 +74,6 @@ def _prefix(action, actions, initial):
         if not progressed:
             break
     return seq
-
-
-def _deps_value(action):
-    """A single small in-range value for a deps probe (the target must execute, and small
-    amounts tend to)."""
-    vals = _probe_values(action)
-    if vals == [None]:
-        return None
-    nonzero = [v for v in vals if v != 0]
-    return nonzero[0] if nonzero else vals[0]
-
-
-def build_deps_harness(preamble, actions, initial_balances):
-    """A dependency-probe harness for `deps`: one testExample per action = a token-flow
-    prefix then the target action bracketed by SEPARATOR logs (dependencyCheck.py diffs the
-    storage each action touches between the separators). Concrete values are best-effort
-    (a small amount that tends to execute); an action needing state the manifest can't set
-    up produces no useful trace, same as a mis-written hand-authored probe would."""
-    fns = []
-    for i, action in enumerate(actions):
-        prefix = _prefix(action, actions, set(initial_balances))
-        body = "".join("    " + _concrete(a, _deps_value(a)) for a in prefix)
-        body += _SEP + "    " + _concrete(action, _deps_value(action)) + _SEP
-        body += '        revert("");\n'
-        fns.append("    function testExample{}() public {{\n{}    }}\n".format(i, body))
-    return preamble + "\n" + "".join(fns) + "\n}\n"
 
 
 def build_validate_harness(preamble, actions, initial_balances):

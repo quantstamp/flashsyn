@@ -212,17 +212,17 @@ def _load_dependencies(manifest_path, actions):
     EARLIER positions in a candidate trace, so listing the action itself wires an edge
     between repeated occurrences of it (deposit then deposit).
 
-    If a deps.json (read-after-write graph from `flashsyn.py deps <ex> --write`, see
-    dependencyCheck.py) sits next to the manifest, build the list from it: each action
-    depends only on the actions that write a slot it reads. Otherwise use the all-others
-    default (every action depends on every other), which is SOUND — it never prunes a real
-    prefix, at the cost of longer collection prefixes and more search orderings.
+    If a hand-written deps.json sits next to the manifest, build the list from it: each
+    action depends only on the actions listed for it. Otherwise use the all-others default
+    (every action depends on every other), which is SOUND — it never prunes a real prefix,
+    at the cost of longer collection prefixes and more search orderings. See docs/deps.md
+    for the file format and how to author one safely.
 
-    A pruned graph is only as complete as the storage trace it came from (a data-dependent
-    write the probe didn't trigger yields a missing edge), so consuming deps.json trades
-    soundness for speed and is opt-in by its presence. Validation is strict: the artifact
-    must name exactly the manifest's actions, and every dependency must be a known action —
-    a stale deps.json fails loud rather than silently pruning the wrong prefixes.
+    A hand-written graph trades soundness for speed and is opt-in by its presence: too few
+    dependencies starve an action of collected data and the search prunes it (the safe
+    direction is to list MORE, only dropping pairs you know commute). Validation is strict:
+    the artifact must name exactly the manifest's actions, and every dependency must be a
+    known action — a stale deps.json fails loud rather than silently pruning wrong prefixes.
     """
     by_name = {a.__name__: a for a in actions}
     deps_path = os.path.join(os.path.dirname(manifest_path), "deps.json")
@@ -235,19 +235,19 @@ def _load_dependencies(manifest_path, actions):
         depends_on = json.load(f).get("depends_on", {})
     if set(depends_on) != set(by_name):
         raise ValueError(
-            "deps.json ({}) does not name exactly the manifest's actions ({}); regenerate "
-            "with `flashsyn.py deps <example> --write`".format(sorted(depends_on), sorted(by_name)))
+            "deps.json ({}) does not name exactly the manifest's actions ({}); fix it by hand "
+            "(see docs/deps.md)".format(sorted(depends_on), sorted(by_name)))
 
     dependencies, edges = [], 0
     for a in actions:
         dep_names = depends_on[a.__name__]
         unknown = [d for d in dep_names if d not in by_name]
         if unknown:
-            raise ValueError("deps.json: action {} depends on unknown action(s) {}; regenerate "
-                             "with `flashsyn.py deps <example> --write`".format(a.__name__, unknown))
+            raise ValueError("deps.json: action {} depends on unknown action(s) {} (see "
+                             "docs/deps.md)".format(a.__name__, unknown))
         dependencies.append([by_name[d] for d in dep_names] + [a])
         edges += len(dep_names)
-    print("[deps] using deps.json ({} read-after-write edges across {} actions)".format(edges, len(actions)))
+    print("[deps] using deps.json ({} dependency edges across {} actions)".format(edges, len(actions)))
     return dependencies
 
 

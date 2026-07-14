@@ -8,7 +8,8 @@
 #   python3 flashsyn.py validate   <your-name>   # smoke-check each action runs (from the manifest)
 #   python3 flashsyn.py collect    <your-name>   # sample the actions -> initialDataPoints/
 #   python3 flashsyn.py synthesize <your-name> > run.log
-#   python3 flashsyn.py deps       <your-name>   # diagnostic only: print a dependency graph
+# Optional: drop a hand-written deps.json next to this manifest to narrow the search
+# from the all-others default (see docs/deps.md); it is auto-loaded when present.
 # =============================================================================
 
 name = "template"          # benchmark id; also the initialDataPoints/<name>/ folder

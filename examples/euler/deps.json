@@ -1,0 +1,10 @@
+{
+  "depends_on": {
+    "eulerDeposit": [],
+    "eulerTouch": [],
+    "eulerMint": ["eulerDeposit"],
+    "eulerBurn": ["eulerDeposit", "eulerMint"],
+    "eulerDonate": ["eulerDeposit", "eulerMint"],
+    "eulerLiquidateWithdraw": ["eulerDeposit", "eulerMint", "eulerDonate"]
+  }
+}

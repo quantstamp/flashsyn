@@ -44,7 +44,6 @@ ERC20, derived native, and the inline internal-value override.
 
 ```sh
 python3 flashsyn.py compile    puppet     # deploy + validate the harness on a fork
-python3 flashsyn.py deps       puppet     # (optional) action dependency graph
 python3 flashsyn.py collect    puppet     # sample the actions
 python3 flashsyn.py synthesize puppet > run.log
 ```

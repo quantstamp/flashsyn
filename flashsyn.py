@@ -4,9 +4,12 @@
 Usage (from the repo root):
     python3 flashsyn.py compile    <example>                        # forge build (does it compile?)
     python3 flashsyn.py validate   <example> [--fast-using-anvil]   # smoke each action from the manifest
-    python3 flashsyn.py deps       <example> [--fast-using-anvil] [--write]   # storage dep graph; --write -> deps.json
     python3 flashsyn.py collect    <example> [--fast-using-anvil]
     python3 flashsyn.py synthesize <example> [--fast-using-anvil] [--jobs N]
+
+An optional examples/<example>/deps.json (a hand-written action dependency graph)
+narrows collect/synthesize from the conservative all-others default; see
+docs/deps.md and manifest._load_dependencies. It is auto-loaded when present.
 
 <example> is a directory under examples/ (e.g. harvest_usdt). It must hold a
 manifest.toml (the declarative action model) and one attack.t.sol. The CLI places
@@ -30,7 +33,6 @@ faster on the Euler collect (248s -> 72s, identical data). Needs `anvil` on PATH
 with Foundry) and the chain's real endpoint to fork from (an env override such as
 `ETH=<rpc>` wins, else run.sh's baked-in default).
 """
-import json
 import os
 import re
 import subprocess
@@ -115,16 +117,14 @@ def _start_anvil(rpc, block, port=8545):
 
 
 def _parse_args(args):
-    """Pull flags out of the arg list, returning (cmd, name, use_anvil, jobs, write).
+    """Pull flags out of the arg list, returning (cmd, name, use_anvil, jobs).
 
-    Flags: --fast-using-anvil (bool), --jobs N / --jobs=N (int, clamped to 1..cpus), and
-    --write (bool; deps-only: persist the dependency graph to examples/<name>/deps.json).
+    Flags: --fast-using-anvil (bool) and --jobs N / --jobs=N (int, clamped to 1..cpus).
     """
     use_anvil = "--fast-using-anvil" in args
-    write = "--write" in args
     jobs = "1"
     positional = []
-    it = iter(a for a in args if a not in ("--fast-using-anvil", "--write"))
+    it = iter(a for a in args if a != "--fast-using-anvil")
     for a in it:
         if a == "--jobs":
             jobs = next(it, "1")
@@ -136,15 +136,13 @@ def _parse_args(args):
         jobs = max(1, min(int(jobs), os.cpu_count() or 1))
     except ValueError:
         sys.exit("--jobs takes an integer")
-    if len(positional) != 2 or positional[0] not in ("compile", "validate", "deps", "collect", "synthesize"):
+    if len(positional) != 2 or positional[0] not in ("compile", "validate", "collect", "synthesize"):
         sys.exit(__doc__)
-    if write and positional[0] != "deps":
-        sys.exit("--write is only valid for `deps` (it writes examples/<name>/deps.json)")
-    return positional[0], positional[1], use_anvil, jobs, write
+    return positional[0], positional[1], use_anvil, jobs
 
 
 def main():
-    cmd, name, use_anvil, jobs, write = _parse_args(sys.argv[1:])
+    cmd, name, use_anvil, jobs = _parse_args(sys.argv[1:])
     os.chdir(ROOT)  # settings.toml + run.sh resolve relative to the repo root
 
     setup = _load_example(name)
@@ -183,35 +181,6 @@ def main():
             command = config.command if "--json" in config.command else config.command + " --json"
             out = subprocess.run(command, shell=True, cwd=FOUNDRY, capture_output=True)
             probe.report(out.stdout, idx)
-        elif cmd == "deps":
-            # Storage read/write dependency graph (see src/dependencyCheck.py). Prints it;
-            # with --write, persists examples/<name>/deps.json, which manifest.load then uses
-            # in place of the all-others default (shorter prefixes + search pruning). Harnesses
-            # are preamble-only, so generate the probes (one per action, bracketed by separators).
-            import probe
-            import dependencyCheck
-            from conventions import extract_preamble
-            with open(HARNESS_DEST) as f:
-                preamble = extract_preamble(f.read())
-            with open(HARNESS_DEST, "w") as f:
-                f.write(probe.build_deps_harness(preamble, setup["actions"], setup["wrapper"].initialBalances))
-            # Label the graph by manifest action name (testExample i brackets actions[i]).
-            names = [a.__name__ for a in setup["actions"]]
-            graph = dependencyCheck.compute_graph(config.command, names)
-            if write:
-                out_path = os.path.join(ROOT, "examples", name, "deps.json")
-                artifact = {
-                    "version": 1,
-                    "note": ("read-after-write dependency graph consumed by manifest.load in place "
-                             "of the all-others default. Regenerate with `flashsyn.py deps {} "
-                             "--write` after changing this example's actions.".format(name)),
-                    "depends_on": graph["depends_on"],
-                    "key_addresses": graph["key_addresses"],
-                }
-                with open(out_path, "w") as f:
-                    json.dump(artifact, f, indent=2, sort_keys=True)
-                    f.write("\n")
-                print("wrote {}".format(out_path))
         elif cmd == "collect":
             w = setup["wrapper"]
             w.initialPass(setup["actions"], setup["dependencies"], w)
