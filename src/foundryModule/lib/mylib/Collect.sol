@@ -8,7 +8,8 @@ import {Strings} from "./StringCon.sol";
 // collect.spent("<token>", amount) (it went down) — amount is the RAW positive magnitude;
 // the direction is the method name (and the effect's op). The engine appends collect.flush(),
 // which reverts "FlashSyn: <token>=<raw> ..." for the parser (forge/forgeJson.py), which
-// scales by token_info decimals. Nothing recorded -> "FlashSyn: 0". Deploy one per harness.
+// scales by token_info decimals. Nothing recorded -> "FlashSyn: 0". Every example harness gets
+// one via the FlashSynHarness base (Harness.sol), which declares and deploys it as `collect`.
 contract Collect {
     string private buf;
 

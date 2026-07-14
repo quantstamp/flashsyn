@@ -15,7 +15,7 @@ import {DSTest} from "ds-test/test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
-import {Collect} from "mylib/Collect.sol";
+import {FlashSynHarness} from "mylib/Harness.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/security/ReentrancyGuard.sol";
 import {Address} from "openzeppelin-contracts/utils/Address.sol";
@@ -90,7 +90,7 @@ interface UniswapV1Factory {
 // the last contract and its state (dvt, puppetPool, uniswapExchange, attacker) is what
 // the action snippets reference. (This comment must not contain the preamble-boundary
 // tokens themselves — see src/conventions.py.)
-contract Puppet is DSTest, stdCheats {
+contract Puppet is DSTest, stdCheats, FlashSynHarness {
     Vm internal constant vm = Vm(HEVM_ADDRESS);
 
     uint256 internal constant UNISWAP_INITIAL_TOKEN_RESERVE = 10e18;
@@ -112,10 +112,7 @@ contract Puppet is DSTest, stdCheats {
     uint256 internal _amt;
     uint256 internal _dep;
 
-    Collect internal collect;
-
     function setUp() public {
-        collect = new Collect();
         attacker = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker"))))));
         vm.label(attacker, "Attacker");
         vm.deal(attacker, ATTACKER_INITIAL_ETH_BALANCE);

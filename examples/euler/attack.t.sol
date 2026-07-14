@@ -7,7 +7,7 @@ import {DSTest} from "ds-test/test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
-import {Collect} from "mylib/Collect.sol";
+import {FlashSynHarness} from "mylib/Harness.sol";
 
 
 
@@ -62,9 +62,8 @@ struct LiquidationOpportunity {
     uint256 conversionRate;
 }
 
-contract euler is DSTest, stdCheats {
+contract euler is DSTest, stdCheats, FlashSynHarness {
     Vm internal constant vm = Vm(HEVM_ADDRESS);
-    Collect internal collect;
     address payable constant attacker = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker"))))));
     address payable constant attacker2 = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker2"))))));
     IUSDC internal constant USDC = IUSDC(address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48));
@@ -78,7 +77,6 @@ contract euler is DSTest, stdCheats {
     LiquidationOpportunity temp;
     
     function setUp() public {
-        collect = new Collect();
         vm.label(attacker, "Attacker");
         address MasterMinter = USDC.masterMinter();
         vm.startPrank(MasterMinter);

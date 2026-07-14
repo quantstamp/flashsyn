@@ -11,7 +11,7 @@ import {DSTest} from "ds-test/test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
-import {Collect} from "mylib/Collect.sol";
+import {FlashSynHarness} from "mylib/Harness.sol";
 
 
 interface IUSDC {
@@ -43,7 +43,7 @@ interface IfUSDC {
     function balanceOf(address account) external view returns (uint256);
 }
 
-contract Harvest_USDT is DSTest, stdCheats {
+contract Harvest_USDT is DSTest, stdCheats, FlashSynHarness {
     Vm internal constant vm = Vm(HEVM_ADDRESS);
     address payable constant attacker = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker"))))));
     IUSDC internal constant USDC = IUSDC(address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48));
@@ -55,10 +55,7 @@ contract Harvest_USDT is DSTest, stdCheats {
     uint256 constant USDC_CAPITAL = 50000000e6;      // 50,000,000 USDC
     uint256 constant USDT_CAPITAL = 18308555417594;  // 18,308,555.417594 USDT
 
-    Collect internal collect;
-
     function setUp() public {
-        collect = new Collect();
         vm.label(attacker, "Attacker");
 
         // Fund USDC through the real masterMinter (same path as the Euler example).

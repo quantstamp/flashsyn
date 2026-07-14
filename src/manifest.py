@@ -31,7 +31,7 @@ Schema (see examples/harvest_usdt/manifest.toml):
     solidity = "CURVE.exchange_underlying(2, 1, $$ * 1e6, 0);"   # numInputs = count of $$
 
 Collectors are always DERIVED and emitted through the harness's Collect helper
-(src/foundryModule/lib/mylib/Collect.sol, deployed as `collect` in setUp): the action records
+(src/foundryModule/lib/mylib/Collect.sol, inherited as `collect` from FlashSynHarness): the action records
 a token's change with collect.gained("<tok>", raw) / collect.spent("<tok>", raw) and the engine
 appends collect.flush(), which reverts "FlashSyn: <tok>=<raw> ..."; the parser maps values to
 positions by name and scales each by token_info decimals (as a float — no rounding in Solidity).

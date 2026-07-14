@@ -14,7 +14,7 @@ import {DSTest} from "ds-test/test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdCheats} from "forge-std/stdlib.sol";
 import {Strings} from "mylib/StringCon.sol";
-import {Collect} from "mylib/Collect.sol";
+import {FlashSynHarness} from "mylib/Harness.sol";
 
 
 // TODO 1. Declare an interface per contract your actions call. Only the functions
@@ -41,7 +41,7 @@ interface IRouter {
         address[] calldata path, address to, uint256 deadline) external;
 }
 
-contract Template is DSTest, stdCheats {
+contract Template is DSTest, stdCheats, FlashSynHarness {
     Vm internal constant vm = Vm(HEVM_ADDRESS);
     address payable constant attacker = payable(address(uint160(uint256(keccak256(abi.encodePacked("attacker"))))));
 
@@ -58,16 +58,15 @@ contract Template is DSTest, stdCheats {
     // temp structs, a second attacker account for liquidations).
     address[] path;
 
-    // Data-collection helper (deployed in setUp below). The engine derives each collector
-    // from the action's tokens_out/effects and emits it through this; an action can also
-    // record an internal value inline with collect.spent/gained("TOK", value).
-    Collect internal collect;
+    // The `collect` data-collection helper is inherited from FlashSynHarness (auto-deployed),
+    // so you don't declare it. The engine derives each collector from the action's
+    // tokens_out/effects and emits it through `collect`; an action can also record an internal
+    // value inline with collect.spent/gained("TOK", value).
 
     // TODO 3. setUp() runs before every test. Fork happens via the CLI flags. Here you:
     //   (a) fund the attacker with the manifest's initial_balances, and
     //   (b) grant approvals.  Leave vm.startPrank(attacker) open at the end.
     function setUp() public {
-        collect = new Collect();
         vm.label(attacker, "Attacker");
 
         // --- (a) Funding. Pick whichever works for each token: ---
