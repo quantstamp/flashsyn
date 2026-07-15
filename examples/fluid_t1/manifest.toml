@@ -1,0 +1,60 @@
+# Fluid (Instadapp) T1 vault — the DEBT-SHIM pattern for modeling NFT-internal vault debt.
+# Demonstration (not a historical exploit). The point:
+#   Vault debt is NFT-internal/non-fungible. We model it as a NEGATIVE-priced pseudo-token
+#   `dUSDC` whose "balance" is the position's live debt, read via a DebtShim contract (see
+#   attack.t.sol). With this, a borrow nets ~0 (received USDC + equal debt) instead of a fake
+#   +USDC profit; a payback nets ~0 too. Drop dUSDC from profit_tokens and the same
+#   `vault_borrow_USDC` action would report the whole borrow as "profit" — that contrast is
+#   the demonstration. No engine change. Expected result: Best Profit ~0. See README.md.
+
+name = "fluid_t1"
+contract = "Fluid_T1"       # --match-contract name in attack.t.sol
+chain = "ETH"
+block = 25500000
+max_synthesis_len = 4
+
+
+# Profit = sum over these of (final - initial) * price. dUSDC is priced NEGATIVE: position debt
+# is a liability, so a larger debt reduces profit. This is what makes borrowing a wash.
+profit_tokens = ["USDC", "dUSDC"]
+
+[initial_balances]
+USDC = 1050000     # 1,000,000 working capital + 50,000 borrowed when the position opens in setUp
+dUSDC = 50000      # position opens with 50,000 USDC debt
+
+[token_prices]
+USDC = 1.0
+dUSDC = -1.0       # NEGATIVE: 1 USDC of debt = -$1 of profit
+
+# token -> [contract variable in the harness, decimals]. dUSDC points at the deployed DebtShim,
+# whose balanceOf(attacker) returns the position's live borrow amount (USDC, 6 decimals).
+[token_info]
+USDC = ["USDC", 6]
+dUSDC = ["debtShim", 6]
+
+# ----------------------------------------------------------------------------
+# Borrow USDC against the fixed position. Both the received USDC and the debt increase are
+# measured as balance deltas (`collected`): USDC via USDC.balanceOf, dUSDC via debtShim.balanceOf.
+# With dUSDC negative-priced, the two cancel -> a borrow is ~0 profit (minus any borrow fee).
+[[actions]]
+name = "vault_borrow_USDC"
+tokens_in = []
+tokens_out = ["USDC"]
+range = [0, 100000]
+solidity = "VAULT.operate(vaultNft, int256(0), int256(uint256($$ * 1e6)), attacker);"
+effects = [
+  { token = "USDC",  op = "add", src = "collected" },
+  { token = "dUSDC", op = "add", src = "collected" },
+]
+
+# Pay back USDC debt. Spends USDC, reduces the modeled debt -> also ~0.
+[[actions]]
+name = "vault_payback_USDC"
+tokens_in = ["USDC"]
+tokens_out = []
+range = [0, 50000]
+solidity = "VAULT.operate(vaultNft, int256(0), -int256(uint256($$ * 1e6)), attacker);"
+effects = [
+  { token = "USDC",  op = "sub", src = "collected" },
+  { token = "dUSDC", op = "sub", src = "collected" },
+]

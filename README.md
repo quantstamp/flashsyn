@@ -136,6 +136,15 @@ rediscovers it — `fleet_deposit → donate_silo → fleet_redeem`, **Best Prof
 params `[49575195, 25048828125, 41494141]` (the ~$1.6M is the single-vault, single-block amount
 bounded by withdrawable liquidity; the historical $6M spanned two vaults).
 
+A reusable **technique** example lives in [`examples/fluid_t1/`](examples/fluid_t1/README.md)
+(a Fluid Instadapp T1 vault, block 25500000): the **debt-shim pattern** for modeling
+**NFT-internal / non-fungible vault debt**. A `DebtShim` contract exposes a position's live debt
+as `balanceOf`, registered as a **negative-priced pseudo-token**, so a borrow scores ~0 (received
+cash + equal debt) instead of a fake profit — letting FlashSyn search borrow-side / leverage
+attacks soundly **with no engine change**. Verified: `253 executions succeed, Best Profit 0`;
+drop the debt pseudo-token and the same borrows would report fake profit. Generalizes to any
+NFT-position lending vault.
+
 ## Docker
 
 A `Dockerfile` pins the whole environment (Foundry + the 2021-era Python stack), which is the
