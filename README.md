@@ -125,6 +125,17 @@ are vendored under `src/foundryModule/src/build-uniswap/v1/`. Run with
 Verified end-to-end (block 16818064): FlashSyn rediscovers the exploit — vector
 `SwapUniswapDVT2ETH → PoolBorrow`, **Best Profit 89,000**, parameters `[999, 99999]`.
 
+The **Lazy Summer Protocol** exploit (Summer.fi, 6 Jul 2026, ~$6.04M) is a recent real-exploit
+rediscovery in [`examples/lazy_summer/`](examples/lazy_summer/README.md), block 25471347. The
+`LazyVault_LowerRisk_USDC` FleetCommander (ERC4626) prices shares off the sum of its Arks'
+`totalAssets()`; a stale, offboarded-but-still-active Silo ark values donated Silo shares at an
+impaired-yet-high rate, so **donating pre-accumulated Silo shares into it inflates the vault NAV
+~9.5%** and shares minted just before redeem at the pumped price. Same archetype as Harvest
+(manipulate the price the vault reads → redeem mispriced shares). Verified end-to-end: FlashSyn
+rediscovers it — `fleet_deposit → donate_silo → fleet_redeem`, **Best Profit 1,491,168**,
+params `[49575195, 25048828125, 41494141]` (the ~$1.6M is the single-vault, single-block amount
+bounded by withdrawable liquidity; the historical $6M spanned two vaults).
+
 ## Docker
 
 A `Dockerfile` pins the whole environment (Foundry + the 2021-era Python stack), which is the

