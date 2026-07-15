@@ -15,12 +15,11 @@ rounding-compound) — the polynomial can't represent those.
 | — | Sky lending | — | OSM-delay + Chainlink, no reserve pricing | N/A (hardened) | assessed — not a target |
 | 1 | **Lazy Summer** | $6.04M | donate stale Silo shares → ark NAV inflation → redeem | **Strong** | ✅ **built + verified** ($1.49M rediscovery) |
 | 2 | Edel Finance | $403K | wGOOGLx exchange rate 78× via deposit/borrow loops | Moderate | greenlit — verify feasibility |
-| 3 | BYToken | $87.4K | `triggerAutoBurn()` burn+`sync()` reserve skew → drain (BSC) | **Strong** | triaged — strong candidate |
-| 4 | NovaBox | $93.6K | dividend distributed before balance update (Ethereum) | Moderate | triaged |
-| 5 | JB DeFi | $50K | "flashloan price manipulation" (protocol unidentified) | Unknown | queued — needs ID |
-| 6 | Thetanuts | $105K net | redemption/integer math, supply reduced → ~0 | Poor–moderate | triaged (singularity) |
-| 7 | Royal.io | $263K | 100 zero-value ERC1155 transfers manipulate accounting | **Poor** | not recommended |
-| 8 | Ambient | $110.6K | surplus-collateral accounting, HotProxy/WarmPath/ColdPath op-cycling | **Poor** | not recommended |
+| 3 | NovaBox | $93.6K | dividend distributed before balance update (Ethereum) | Moderate | triaged |
+| 4 | JB DeFi | $50K | "flashloan price manipulation" (protocol unidentified) | Unknown | queued — needs ID |
+| 5 | Thetanuts | $105K net | redemption/integer math, supply reduced → ~0 | Poor–moderate | triaged (singularity) |
+| 6 | Royal.io | $263K | 100 zero-value ERC1155 transfers manipulate accounting | **Poor** | not recommended |
+| 7 | Ambient | $110.6K | surplus-collateral accounting, HotProxy/WarmPath/ColdPath op-cycling | **Poor** | not recommended |
 
 ## What to explore / check per candidate
 
@@ -30,21 +29,15 @@ rounding-compound) — the polynomial can't represent those.
 - **Actions if buildable**: `deposit → borrow` (amounts as params), with the wGOOGLx exchange-rate read as the manipulated quantity. Model over-borrow as profit (walk-away, like the T1 borrow); the health/rate check caps it on-chain.
 - **Get**: exploit tx hash + block, wGOOGLx wrapper contract + its exchange-rate function, the Edel lending pool address, borrowed asset.
 
-### 3. BYToken (strong — BSC, cleanest of the newer batch)
-- **Chain**: BSC — already supported (`run.sh` has a `BSC` endpoint). No plumbing.
-- **Mechanism**: `triggerAutoBurn()` (unprivileged) burns BY from the BY/WBNB Pancake pair and calls `pair.sync()` → reserves rewritten to ~1 BY + full WBNB → extreme skew → sell BY to drain WBNB.
-- **Actions**: `swap_WBNB_to_BY` (acquire BY) → `triggerAutoBurn()` (zero-param manipulation action, model like Euler's `donate`/`touch`) → `swap_BY_to_WBNB` (drain). Profit smooth in swap amounts. Flash loan is the WBNB capital (fund in `setUp`).
-- **Get**: exploit tx + block, BYToken contract + `triggerAutoBurn` signature, the BY/WBNB Pancake pair address, Moolah flashloan source, BY/WBNB decimals.
-
-### 4. NovaBox (moderate — Ethereum)
+### 3. NovaBox (moderate — Ethereum)
 - **Mechanism**: dividends credited before balance update. Deposit small NOVA (snapshot dividend at small share) → large ETH deposit (inflate actual share, system still uses stale share) → claim "phantom dividends".
 - **Fit caveat**: profit is amount-driven (phantom dividend scales with deposit sizes) but the distribute-before-update ordering can make it threshold-y. Worth an attempt if greenlit.
 - **Get**: exploit tx + block, NovaBox reward-pool contract, deposit/withdraw/claim signatures, NOVA token.
 
-### 5. JB DeFi (queued — identify first)
+### 4. JB DeFi (queued — identify first)
 - "JB DeFi protocol" is ambiguous (JuiceBox? Jimbo? other?). $50K, "flashloan price manipulation". **First step: identify the actual protocol + exploit tx + chain**, then re-triage. If it's genuine AMM price manipulation on a supported chain, likely a good fit.
 
-### 6–8. Thetanuts / Royal.io / Ambient (not recommended)
+### 5–7. Thetanuts / Royal.io / Ambient (not recommended)
 - **Thetanuts**: redemption/integer math with supply→0 is a *singularity* — polynomial approximation fails near it. Would need a custom reformulation; skip unless specifically wanted.
 - **Royal.io**: driven by the *count* of zero-value ERC1155 transfers (amounts = 0). FlashSyn optimizes amounts, not call counts — structural mismatch. Document as "out of FlashSyn's class" rather than build.
 - **Ambient**: accounting bug exploited by *cycling* HotProxy/WarmPath/ColdPath operations — discrete op-sequence, not amount-driven. Same mismatch as Royal.io.
