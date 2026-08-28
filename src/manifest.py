@@ -215,8 +215,8 @@ def _load_dependencies(manifest_path, actions):
     If a hand-written deps.json sits next to the manifest, build the list from it: each
     action depends only on the actions listed for it. Otherwise use the all-others default
     (every action depends on every other), which is SOUND — it never prunes a real prefix,
-    at the cost of longer collection prefixes and more search orderings. See docs/deps.md
-    for the file format and how to author one safely.
+    at the cost of longer collection prefixes and more search orderings. See the README
+    ("a dependency graph") and examples/euler/deps.json for the format and how to author one safely.
 
     A hand-written graph trades soundness for speed and is opt-in by its presence: too few
     dependencies starve an action of collected data and the search prunes it (the safe
@@ -236,7 +236,7 @@ def _load_dependencies(manifest_path, actions):
     if set(depends_on) != set(by_name):
         raise ValueError(
             "deps.json ({}) does not name exactly the manifest's actions ({}); fix it by hand "
-            "(see docs/deps.md)".format(sorted(depends_on), sorted(by_name)))
+            "(see examples/euler/deps.json)".format(sorted(depends_on), sorted(by_name)))
 
     dependencies, edges = [], 0
     for a in actions:
@@ -244,7 +244,7 @@ def _load_dependencies(manifest_path, actions):
         unknown = [d for d in dep_names if d not in by_name]
         if unknown:
             raise ValueError("deps.json: action {} depends on unknown action(s) {} (see "
-                             "docs/deps.md)".format(a.__name__, unknown))
+                             "examples/euler/deps.json)".format(a.__name__, unknown))
         dependencies.append([by_name[d] for d in dep_names] + [a])
         edges += len(dep_names)
     print("[deps] using deps.json ({} dependency edges across {} actions)".format(edges, len(actions)))

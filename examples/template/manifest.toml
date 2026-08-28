@@ -9,7 +9,8 @@
 #   python3 flashsyn.py collect    <your-name>   # sample the actions -> initialDataPoints/
 #   python3 flashsyn.py synthesize <your-name> > run.log
 # Optional: drop a hand-written deps.json next to this manifest to narrow the search
-# from the all-others default (see docs/deps.md); it is auto-loaded when present.
+# from the all-others default (see the README, "a dependency graph", and
+# examples/euler/deps.json); it is auto-loaded when present.
 # =============================================================================
 
 name = "template"          # benchmark id; also the initialDataPoints/<name>/ folder

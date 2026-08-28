@@ -8,8 +8,8 @@ Usage (from the repo root):
     python3 flashsyn.py synthesize <example> [--fast-using-anvil] [--jobs N]
 
 An optional examples/<example>/deps.json (a hand-written action dependency graph)
-narrows collect/synthesize from the conservative all-others default; see
-docs/deps.md and manifest._load_dependencies. It is auto-loaded when present.
+narrows collect/synthesize from the conservative all-others default; see the README
+("a dependency graph") and manifest._load_dependencies. It is auto-loaded when present.
 
 <example> is a directory under examples/ (e.g. harvest_usdt). It must hold a
 manifest.toml (the declarative action model) and one attack.t.sol. The CLI places

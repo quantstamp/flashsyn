@@ -5,25 +5,28 @@ flash-loan / price-manipulation attack synthesizer. This repo ships the **fixed 
 template**, not a baked-in exploit. To analyze a protocol you fill in two files; the engine is never
 edited.
 
-A full walkthrough (with the two-part `$$` / `revert("FlashSyn: …")` contract explained) is in
-[`docs/REUSABLE_WORKFLOW.html`](docs/REUSABLE_WORKFLOW.html).
+The full walkthrough is this README: [What you author](#what-you-author) and the
+[Run procedure](#run-procedure) below cover the whole flow, and the fully commented
+[`examples/template/`](examples/template/) (its `manifest.toml` and `README.md`) is the
+fill-in-the-blanks starting point — including the `$$` parameter-placeholder mechanics.
 
 ## Layout
 
 ```
 src/
-  synthesizer.py, Partial.py, shgo/, forge/   # search engine (do not edit)
+  synthesizer.py, Partial.py, vendored_shgo/, forge/  # search engine (do not edit)
   Actions/                                     # engine internals: approximation, DAG, data collection
-  dependencyCheck.py                           # storage read/write dependency analysis
+  manifest.py                                  # loads manifest.toml into the action model
+  probe.py, conventions.py                     # `validate` smoke-harness + preamble parsing
   FlashSynProActions/
     ActionPro.py                               # action base class (do not edit)
-    template.py        <-- copy this           # Python action-model template
   foundryModule/
     run.sh                                     # generic forge runner (contract + chain + block)
-    src/test/template.t.sol   <-- copy this    # Solidity harness template
+    src/test/                                  # the CLI drops the example's attack.t.sol here
     lib/                                       # ds-test, forge-std, mylib, openzeppelin
 examples/
-  euler/                                       # worked example — Euler self-liquidation (Python model)
+  template/          <-- copy this             # commented manifest.toml + attack.t.sol to fill in
+  euler/                                       # worked example — Euler self-liquidation
   harvest_usdt/                                # worked example — Harvest Finance fUSDC leg (2020)
   harvest_usdc/                                # worked example — Harvest Finance fUSDT leg (2020)
   puppet/                                      # worked example — Damn Vulnerable DeFi "Puppet" (local deploy)
@@ -70,10 +73,13 @@ python3 -m pip install -r requirements.txt   # prerequisites: Foundry + Python d
 
 python3 flashsyn.py compile    <name>        # forge build — does the harness compile?
 python3 flashsyn.py validate   <name>        # smoke-check each action runs (from the manifest)
-python3 flashsyn.py deps       <name>        # diagnostic: print a dependency graph (not yet consumed)
 python3 flashsyn.py collect    <name>        # collect initial data points
 python3 flashsyn.py synthesize <name> > run.log
 ```
+
+The four subcommands are `compile`, `validate`, `collect`, and `synthesize` — nothing else.
+`synthesize` also accepts `--jobs N` to run each round's candidate optimisations across N
+processes (default 1; sweet spot ~2–4).
 
 The tail of `run.log` prints the best profit and the winning action sequence +
 parameters. This works for **every** example, including Euler.
@@ -93,6 +99,17 @@ RPC (several sequential round-trips); anvil collapses those to localhost. Measur
 (ships with Foundry) and the chain's real endpoint to fork from (`ETH=<rpc>`, else
 run.sh's default). Under Docker, the `foundry-cache` volume persists fetched fork state
 across `--rm` runs, compounding the win.
+
+**Optional: a dependency graph (`deps.json`).** By default the engine assumes every action's
+prestate depends on every other action — sound (it never prunes a prefix the search needs) but it
+collects longer prefixes and explores more orderings. Dropping a hand-written
+`examples/<name>/deps.json` next to the manifest overrides that with a tighter graph, and it is
+**auto-loaded** by `collect` and `synthesize` — no flag. The format is
+`{"depends_on": {"<action>": ["<dependency>", ...], ...}}`, keyed by the manifest's action
+`name`s; it is validated strictly (it must name exactly the manifest's actions, and every
+dependency must be a known action) and **fails loud** on a stale entry rather than silently
+pruning the wrong prefix. List **more** dependencies when unsure — dropping a pair asserts the two
+commute. See [`examples/euler/deps.json`](examples/euler/deps.json) for a worked example.
 
 ## Worked examples
 
@@ -161,13 +178,13 @@ docker run --rm -it -e ETH=<your-mainnet-archive-rpc> flashsyn
 ETH=<your-mainnet-archive-rpc> docker compose run --rm flashsyn
 ```
 
-Inside the container the workflow is unchanged — `./run.sh <contract> <chain> <block>`, then
-`dependencyCheck.py`, etc. Pass your archive-node endpoint via `-e ETH=...` (or `BSC`/`Fantom`/
+Inside the container the workflow is unchanged — the same `python3 flashsyn.py <cmd> <name>`
+commands as above. Pass your archive-node endpoint via `-e ETH=...` (or `BSC`/`Fantom`/
 `Polygon`); `run.sh` reads them from the environment.
 
-**Foundry fidelity.** FlashSyn's parsers have been modernised to consume **`forge test --json`**
-(data collectors) and the plain decoded **`-vvvv` trace** (`dependencyCheck.py`), so the **default,
-latest forge just works** — no version pin needed. The old code scraped ANSI-coloured `-vvv` text,
+**Foundry fidelity.** FlashSyn's data-collector parser has been modernised to consume
+**`forge test --json`**, so the **default, latest forge just works** — no version pin needed.
+The old code scraped ANSI-coloured `-vvv` text,
 which a piped modern forge no longer emits; that is fixed. A `pinned-source` build arg exists to
 compile the 2023 commit `5be158b` from source, but it is **obsolete and currently broken** — kept only
 for the historical note below:

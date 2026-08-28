@@ -28,7 +28,7 @@ examples/<your-name>/
 - the **balance transition** (`transit`) — generated from `tokens_in`/`tokens_out` (override with `effects`).
 - `calcProfit` — derived from `profit_tokens` + balances + prices.
 - the **action dependency graph** — a conservative all-others default, unless you drop a
-  hand-written `deps.json` next to the manifest to narrow it (see docs/deps.md).
+  hand-written `deps.json` next to the manifest to narrow it (see `examples/euler/deps.json`).
 - no file copying, no source editing to switch collection vs. synthesis.
 
 ## Run flow (from the repo root)
@@ -41,7 +41,7 @@ python3 flashsyn.py synthesize <your-name> > run.log
 ```
 
 Optional: a hand-written `deps.json` next to the manifest narrows the search from the
-all-others default and is auto-loaded when present — see `docs/deps.md`.
+all-others default and is auto-loaded when present — see `examples/euler/deps.json`.
 
 `validate` is the quick "does each action even run" check — it generates a per-action smoke
 harness from the manifest (no test functions in `attack.t.sol`) and reports RUNS/FAILS.

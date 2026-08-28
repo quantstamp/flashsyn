@@ -40,8 +40,9 @@ python3 flashsyn.py synthesize euler > run.log   # counter-example synthesis
 ```
 
 This example ships a hand-written `deps.json` (an action dependency graph that narrows the
-search from the all-others default); it is auto-loaded by `collect`/`synthesize`. See
-`docs/deps.md` for the format.
+search from the all-others default); it is auto-loaded by `collect`/`synthesize`. See the
+repo README ("a dependency graph") for the format — `deps.json` in this directory is itself
+the worked example.
 
 Expected result: FlashSyn rediscovers the exploit — best vector
 `eulerDeposit → eulerMint → eulerDonate → eulerLiquidateWithdraw`, **Best Profit 22,415,806**
