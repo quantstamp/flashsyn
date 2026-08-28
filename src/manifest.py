@@ -292,6 +292,12 @@ def load(manifest_path):
             "range": list(a["range"]),
             "actionStr": classmethod(_make_action_str(a["name"], solidity)),
         }
+        # A multi-$$ action (numInputs>=2, e.g. `f{value: $$}( $$ )` or a two-arg swap) needs a
+        # second search range: collectBounds reads action.range2 for the 2nd parameter. The loader
+        # only ever set `range`, so any two-$$ action crashed collect with AttributeError('range2').
+        # Load an optional `range2` (default = range, i.e. both params share bounds).
+        if num_inputs >= 2:
+            attrs["range2"] = list(a.get("range2", a["range"]))
         measures = _measures_for(a)
         # (token, decimals) in effect (collected) order; the parser maps a named collector revert to
         # positions with the names (emit order need not match) and scales each raw value by
